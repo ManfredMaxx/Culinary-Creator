@@ -38,10 +38,12 @@ export interface IStorage {
   deleteStepsByRecipe(recipeId: number): Promise<void>;
 
   // Images
+  getImage(id: number): Promise<RecipeImage | undefined>;
   getImagesByRecipe(recipeId: number): Promise<RecipeImage[]>;
   createImage(image: InsertRecipeImage): Promise<RecipeImage>;
   createImages(images: InsertRecipeImage[]): Promise<RecipeImage[]>;
   updateImage(id: number, image: Partial<InsertRecipeImage>): Promise<RecipeImage | undefined>;
+  deleteImage(id: number): Promise<void>;
   deleteImagesByRecipe(recipeId: number): Promise<void>;
 }
 
@@ -143,6 +145,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Images
+  async getImage(id: number): Promise<RecipeImage | undefined> {
+    const [image] = await db.select().from(recipeImages).where(eq(recipeImages.id, id));
+    return image;
+  }
+
   async getImagesByRecipe(recipeId: number): Promise<RecipeImage[]> {
     return db.select().from(recipeImages).where(eq(recipeImages.recipeId, recipeId));
   }
@@ -164,6 +171,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(recipeImages.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteImage(id: number): Promise<void> {
+    await db.delete(recipeImages).where(eq(recipeImages.id, id));
   }
 
   async deleteImagesByRecipe(recipeId: number): Promise<void> {

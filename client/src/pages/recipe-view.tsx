@@ -142,6 +142,11 @@ export default function RecipeView() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="icon" asChild data-testid="button-edit">
+              <Link href={`/recipe/${recipeId}/edit`}>
+                <Edit className="w-4 h-4" />
+              </Link>
+            </Button>
             <Button variant="outline" size="icon" onClick={handlePrint} data-testid="button-print">
               <Printer className="w-4 h-4" />
             </Button>

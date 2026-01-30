@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Upload, X, Loader2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { convertToJpeg } from "@/lib/image-utils";
 
 interface ImageUploaderProps {
   onImagesUploaded: (images: { file: File; preview: string }[]) => void;
@@ -19,20 +20,38 @@ export function ImageUploader({
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [isConverting, setIsConverting] = useState(false);
+
   const handleFiles = useCallback(
-    (files: FileList) => {
-      const validFiles = Array.from(files).filter((file) =>
-        file.type.startsWith("image/")
-      );
+    async (files: FileList) => {
+      const validFiles = Array.from(files).filter((file) => {
+        const type = file.type.toLowerCase();
+        const name = file.name.toLowerCase();
+        return (
+          type.startsWith("image/") ||
+          name.endsWith(".heic") ||
+          name.endsWith(".heif")
+        );
+      });
 
-      const newImages = validFiles.map((file) => ({
-        file,
-        preview: URL.createObjectURL(file),
-      }));
+      if (validFiles.length === 0) return;
 
-      const combined = [...images, ...newImages].slice(0, maxImages);
-      setImages(combined);
-      onImagesUploaded(combined);
+      setIsConverting(true);
+      try {
+        const processedImages = await Promise.all(
+          validFiles.map(async (file) => {
+            const preview = await convertToJpeg(file);
+            return { file, preview };
+          })
+        );
+
+        const combined = [...images, ...processedImages].slice(0, maxImages);
+        setImages(combined);
+        onImagesUploaded(combined);
+      } catch (error) {
+        console.error("Image processing error:", error);
+      }
+      setIsConverting(false);
     },
     [images, maxImages, onImagesUploaded]
   );
@@ -85,7 +104,7 @@ export function ImageUploader({
       >
         <CardContent className="p-6 flex flex-col items-center justify-center gap-4">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-            {isAnalyzing ? (
+            {isAnalyzing || isConverting ? (
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             ) : (
               <Camera className="w-8 h-8 text-muted-foreground" />
@@ -93,7 +112,7 @@ export function ImageUploader({
           </div>
           <div className="text-center">
             <p className="text-lg font-medium">
-              {isAnalyzing ? "Analyzing cooking stages..." : "Add cooking stage photos"}
+              {isConverting ? "Processing images..." : isAnalyzing ? "Analyzing cooking stages..." : "Add cooking stage photos"}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               Drag and drop or click to upload images
@@ -102,14 +121,14 @@ export function ImageUploader({
           <label>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               multiple
               className="hidden"
               onChange={handleInputChange}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || isConverting}
               data-testid="input-image-upload"
             />
-            <Button variant="outline" asChild disabled={isAnalyzing}>
+            <Button variant="outline" asChild disabled={isAnalyzing || isConverting}>
               <span className="cursor-pointer">
                 <Upload className="w-4 h-4 mr-2" />
                 Choose Files

@@ -211,6 +211,197 @@ export async function registerRoutes(
     }
   });
 
+  // Update recipe schema
+  const updateRecipeSchema = z.object({
+    title: z.string().min(1, "Title is required"),
+    description: z.string().optional(),
+    servings: z.number().optional().nullable(),
+    prepTime: z.number().optional().nullable(),
+    cookTime: z.number().optional().nullable(),
+    ingredients: z.array(z.object({
+      name: z.string(),
+      quantity: z.string().optional(),
+      unit: z.string().optional(),
+      notes: z.string().optional(),
+    })).optional(),
+    steps: z.array(z.object({
+      stepNumber: z.number(),
+      instruction: z.string(),
+      duration: z.number().optional().nullable(),
+    })).optional(),
+  });
+
+  // Update recipe
+  app.put("/api/recipes/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = (req.user as any).claims.sub;
+
+      const recipe = await storage.getRecipe(id);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      if (recipe.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const parseResult = updateRecipeSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request body" });
+      }
+
+      const { title, description, servings, prepTime, cookTime, ingredients, steps } = parseResult.data;
+
+      // Update the recipe
+      await storage.updateRecipe(id, {
+        title,
+        description,
+        servings: servings ?? null,
+        prepTime: prepTime ?? null,
+        cookTime: cookTime ?? null,
+      });
+
+      // Replace ingredients
+      if (ingredients) {
+        await storage.deleteIngredientsByRecipe(id);
+        if (ingredients.length > 0) {
+          await storage.createIngredients(
+            ingredients.map((ing, index) => ({
+              recipeId: id,
+              name: ing.name,
+              quantity: ing.quantity || null,
+              unit: ing.unit || null,
+              notes: ing.notes || null,
+              orderIndex: index,
+            }))
+          );
+        }
+      }
+
+      // Replace steps
+      if (steps) {
+        await storage.deleteStepsByRecipe(id);
+        if (steps.length > 0) {
+          await storage.createSteps(
+            steps.map((step) => ({
+              recipeId: id,
+              stepNumber: step.stepNumber,
+              instruction: step.instruction,
+              duration: step.duration || null,
+              imageUrl: null,
+              imageDescription: null,
+            }))
+          );
+        }
+      }
+
+      const fullRecipe = await storage.getRecipeWithDetails(id);
+      res.json(fullRecipe);
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+      res.status(500).json({ error: "Failed to update recipe" });
+    }
+  });
+
+  // Add image to recipe
+  app.post("/api/recipes/:id/images", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const recipeId = parseInt(req.params.id);
+      const userId = (req.user as any).claims.sub;
+
+      const recipe = await storage.getRecipe(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      if (recipe.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const { imageData, stepId } = req.body;
+      if (!imageData) {
+        return res.status(400).json({ error: "Image data is required" });
+      }
+
+      // Analyze the image
+      const analysis = await analyzeImage(imageData);
+
+      const image = await storage.createImage({
+        recipeId,
+        stepId: stepId || null,
+        imageUrl: null,
+        imageData: imageData.replace(/^data:image\/\w+;base64,/, ""),
+        stageDescription: analysis.description,
+        aiAnalysis: analysis.rawAnalysis,
+      });
+
+      res.status(201).json(image);
+    } catch (error) {
+      console.error("Error adding image:", error);
+      res.status(500).json({ error: "Failed to add image" });
+    }
+  });
+
+  // Update image (e.g., assign to step)
+  app.patch("/api/recipes/:recipeId/images/:imageId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const recipeId = parseInt(req.params.recipeId);
+      const imageId = parseInt(req.params.imageId);
+      const userId = (req.user as any).claims.sub;
+
+      const recipe = await storage.getRecipe(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      if (recipe.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const image = await storage.getImage(imageId);
+      if (!image || image.recipeId !== recipeId) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const { stepId } = req.body;
+      const updated = await storage.updateImage(imageId, { stepId: stepId ?? null });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating image:", error);
+      res.status(500).json({ error: "Failed to update image" });
+    }
+  });
+
+  // Delete image
+  app.delete("/api/recipes/:recipeId/images/:imageId", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const recipeId = parseInt(req.params.recipeId);
+      const imageId = parseInt(req.params.imageId);
+      const userId = (req.user as any).claims.sub;
+
+      const recipe = await storage.getRecipe(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      if (recipe.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const image = await storage.getImage(imageId);
+      if (!image || image.recipeId !== recipeId) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      await storage.deleteImage(imageId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      res.status(500).json({ error: "Failed to delete image" });
+    }
+  });
+
   // Transcribe audio and generate structured recipe
   app.post("/api/transcribe-recipe", isAuthenticated, async (req: Request, res: Response) => {
     try {

@@ -68,18 +68,7 @@ export default function NewRecipe() {
 
   const analyzeImagesMutation = useMutation({
     mutationFn: async (imageFiles: { file: File; preview: string }[]) => {
-      const imageData = await Promise.all(
-        imageFiles.map(async (img) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              resolve(reader.result as string);
-            };
-            reader.readAsDataURL(img.file);
-          });
-        })
-      );
-
+      const imageData = imageFiles.map((img) => img.preview);
       const response = await apiRequest("POST", "/api/analyze-images", { images: imageData });
       return await response.json() as { analyses: { description: string; suggestedStep: number }[] };
     },
@@ -90,17 +79,7 @@ export default function NewRecipe() {
       recipe: RecipePreview;
       images: { file: File; preview: string }[];
     }) => {
-      const imageData = await Promise.all(
-        data.images.map(async (img) => {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              resolve(reader.result as string);
-            };
-            reader.readAsDataURL(img.file);
-          });
-        })
-      );
+      const imageData = data.images.map((img) => img.preview);
 
       const transformedRecipe = {
         ...data.recipe,
