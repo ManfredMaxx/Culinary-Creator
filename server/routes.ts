@@ -417,29 +417,32 @@ function generateRecipeHtml(recipe: any): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${recipe.title} - RecipeVault</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Georgia', serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; }
-    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; color: #c25822; }
-    .description { font-style: italic; color: #666; margin-bottom: 1.5rem; font-size: 1.1rem; }
-    .meta { display: flex; gap: 2rem; margin-bottom: 2rem; padding: 1rem; background: #f9f5f2; border-radius: 8px; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1614; background: #faf8f6; }
+    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 500; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; color: #1a1614; letter-spacing: -0.01em; }
+    .description { font-style: italic; color: #6b5f58; margin-bottom: 1.5rem; font-size: 1.1rem; }
+    .meta { display: flex; gap: 2rem; margin-bottom: 2rem; padding: 1rem 1.25rem; background: #f0ebe6; border-radius: 6px; border-left: 3px solid #d9a441; }
     .meta-item { display: flex; flex-direction: column; }
-    .meta-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
-    .meta-value { font-size: 1.2rem; font-weight: 600; }
-    .cover-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-bottom: 2rem; }
-    .section-title { font-size: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #c25822; }
+    .meta-label { font-size: 0.75rem; color: #8a7f78; text-transform: uppercase; letter-spacing: 0.1em; }
+    .meta-value { font-size: 1.1rem; font-weight: 600; color: #1a1614; }
+    .cover-image { width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .section-title { font-size: 1.4rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #d9a441; color: #1a1614; }
     .ingredients { margin-bottom: 2rem; }
     .ingredients ul { list-style: none; }
-    .ingredients li { padding: 0.5rem 0; border-bottom: 1px solid #eee; display: flex; }
-    .ingredients li::before { content: "•"; color: #c25822; font-weight: bold; margin-right: 0.75rem; }
-    .ingredient-qty { font-weight: 600; margin-right: 0.5rem; }
+    .ingredients li { padding: 0.5rem 0; border-bottom: 1px solid #e8e2dc; display: flex; }
+    .ingredients li::before { content: ""; width: 6px; height: 6px; background: #d9a441; border-radius: 50%; margin-right: 0.75rem; margin-top: 0.5rem; flex-shrink: 0; }
+    .ingredient-qty { font-weight: 600; margin-right: 0.5rem; color: #1a1614; }
     .steps { margin-bottom: 2rem; }
     .step { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-    .step-number { width: 32px; height: 32px; background: #c25822; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-    .step-content { flex: 1; line-height: 1.6; }
-    .step-image { max-width: 300px; border-radius: 8px; margin-top: 1rem; }
+    .step-number { width: 32px; height: 32px; background: linear-gradient(135deg, #d9a441 0%, #c49235 100%); color: #1a1614; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; font-size: 0.9rem; }
+    .step-content { flex: 1; line-height: 1.7; }
+    .step-image { max-width: 300px; border-radius: 6px; margin-top: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8e2dc; text-align: center; color: #8a7f78; font-size: 0.85rem; }
     @media print {
-      body { padding: 20px; }
+      body { padding: 20px; background: white; }
       .cover-image { max-height: 300px; }
     }
   </style>
@@ -477,13 +480,14 @@ function generateRecipeHtml(recipe: any): string {
           <div class="step-number">${step.stepNumber}</div>
           <div class="step-content">
             <p>${step.instruction}</p>
-            ${step.duration ? `<small style="color: #888;">About ${step.duration} minutes</small>` : ""}
+            ${step.duration ? `<small style="color: #8a7f78;">About ${step.duration} minutes</small>` : ""}
             ${stepImage ? `<img src="data:image/jpeg;base64,${stepImage.imageData}" alt="${stepImage.stageDescription || ''}" class="step-image">` : ""}
           </div>
         </div>
       `;
     }).join("")}
   </div>
+  <div class="footer">Created with RecipeVault</div>
 </body>
 </html>`;
 }
@@ -497,30 +501,37 @@ function generateRecipeBookHtml(title: string, recipes: any[]): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} - RecipeVault</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Georgia', serif; color: #333; }
-    .page { page-break-after: always; min-height: 100vh; padding: 40px; }
-    .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(135deg, #c25822 0%, #e67e22 100%); color: white; }
-    .cover h1 { font-size: 3rem; margin-bottom: 1rem; }
-    .cover p { font-size: 1.2rem; opacity: 0.9; }
-    .toc { padding-top: 60px; }
-    .toc h2 { font-size: 2rem; margin-bottom: 2rem; text-align: center; color: #c25822; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; color: #1a1614; }
+    h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 500; }
+    .page { page-break-after: always; min-height: 100vh; padding: 50px; background: #faf8f6; }
+    .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(135deg, #1a1614 0%, #2d2622 50%, #1a1614 100%); color: #e8e2dc; }
+    .cover h1 { font-size: 3.5rem; margin-bottom: 1rem; color: #d9a441; letter-spacing: -0.02em; }
+    .cover p { font-size: 1.2rem; color: #a89c94; }
+    .cover .subtitle { margin-top: 0.5rem; font-style: italic; }
+    .cover .footer { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #3d3632; font-size: 0.9rem; color: #6b5f58; }
+    .toc { padding-top: 60px; background: #faf8f6; }
+    .toc h2 { font-size: 2rem; margin-bottom: 2rem; text-align: center; color: #1a1614; }
     .toc ul { list-style: none; max-width: 600px; margin: 0 auto; }
-    .toc li { padding: 1rem 0; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; }
-    .toc a { color: inherit; text-decoration: none; }
-    .recipe-page h1 { font-size: 2rem; color: #c25822; margin-bottom: 0.5rem; }
-    .recipe-page .description { font-style: italic; color: #666; margin-bottom: 1rem; }
-    .recipe-page .meta { display: flex; gap: 2rem; margin-bottom: 1.5rem; padding: 0.75rem; background: #f9f5f2; border-radius: 6px; font-size: 0.9rem; }
-    .recipe-page .section-title { font-size: 1.25rem; margin: 1.5rem 0 0.75rem; padding-bottom: 0.25rem; border-bottom: 2px solid #c25822; }
+    .toc li { padding: 1rem 0; border-bottom: 1px solid #e8e2dc; display: flex; justify-content: space-between; }
+    .toc li span:first-child { color: #1a1614; }
+    .toc li span:last-child { color: #d9a441; font-weight: 600; }
+    .recipe-page { background: #faf8f6; }
+    .recipe-page h1 { font-size: 2rem; color: #1a1614; margin-bottom: 0.5rem; }
+    .recipe-page .description { font-style: italic; color: #6b5f58; margin-bottom: 1rem; }
+    .recipe-page .meta { display: flex; gap: 2rem; margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: #f0ebe6; border-radius: 6px; font-size: 0.9rem; border-left: 3px solid #d9a441; }
+    .recipe-page .meta span { color: #1a1614; }
+    .recipe-page .section-title { font-size: 1.25rem; margin: 1.5rem 0 0.75rem; padding-bottom: 0.25rem; border-bottom: 2px solid #d9a441; color: #1a1614; }
     .recipe-page .ingredients ul { list-style: none; columns: 2; column-gap: 2rem; }
-    .recipe-page .ingredients li { padding: 0.3rem 0; break-inside: avoid; }
-    .recipe-page .ingredients li::before { content: "•"; color: #c25822; margin-right: 0.5rem; }
+    .recipe-page .ingredients li { padding: 0.3rem 0; break-inside: avoid; display: flex; align-items: baseline; }
+    .recipe-page .ingredients li::before { content: ""; width: 5px; height: 5px; background: #d9a441; border-radius: 50%; margin-right: 0.5rem; flex-shrink: 0; }
     .recipe-page .step { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
-    .recipe-page .step-number { width: 24px; height: 24px; background: #c25822; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; flex-shrink: 0; }
-    .recipe-page .step-content { flex: 1; line-height: 1.5; font-size: 0.95rem; }
+    .recipe-page .step-number { width: 24px; height: 24px; background: linear-gradient(135deg, #d9a441 0%, #c49235 100%); color: #1a1614; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
+    .recipe-page .step-content { flex: 1; line-height: 1.6; font-size: 0.95rem; }
     @media print {
-      .page { padding: 30px; }
+      .page { padding: 35px; }
       .cover { min-height: 100vh; }
     }
   </style>
@@ -528,8 +539,8 @@ function generateRecipeBookHtml(title: string, recipes: any[]): string {
 <body>
   <div class="page cover">
     <h1>${title}</h1>
-    <p>${recipes.length} delicious recipes</p>
-    <p style="margin-top: 2rem; font-size: 0.9rem;">Created with RecipeVault</p>
+    <p class="subtitle">${recipes.length} curated recipes</p>
+    <p class="footer">Created with RecipeVault</p>
   </div>
 
   <div class="page toc">

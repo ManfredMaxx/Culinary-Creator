@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, BookOpen, Search, ChefHat, Loader2 } from "lucide-react";
+import { Plus, BookOpen, Search, UtensilsCrossed, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,11 +30,11 @@ export default function Dashboard() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="font-serif text-3xl font-bold">
-                Welcome back{user?.firstName ? `, ${user.firstName}` : ""}!
+              <h1 className="font-serif text-3xl font-medium tracking-tight">
+                Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Your personal recipe collection
+                Your culinary collection awaits
               </p>
             </div>
             <div className="flex gap-3">
@@ -89,14 +89,15 @@ export default function Dashboard() {
           ) : recipes && recipes.length === 0 ? (
             <Card className="max-w-lg mx-auto">
               <CardContent className="p-12 text-center">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                  <ChefHat className="w-10 h-10 text-primary" />
+                <div className="relative w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                  <UtensilsCrossed className="w-10 h-10 text-primary" />
+                  <div className="absolute inset-0 rounded-full glow-warm opacity-50" />
                 </div>
-                <h2 className="font-serif text-2xl font-semibold mb-3">
-                  No recipes yet
+                <h2 className="font-serif text-2xl font-medium mb-3">
+                  Your kitchen is ready
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  Start building your recipe collection by recording your first recipe
+                  Begin your culinary journey by creating your first recipe
                 </p>
                 <Button asChild data-testid="button-create-first">
                   <Link href="/new">

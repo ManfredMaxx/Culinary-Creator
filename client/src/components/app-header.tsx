@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ChefHat, LogOut } from "lucide-react";
+import { UtensilsCrossed, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,12 +20,15 @@ export function AppHeader() {
     : "U";
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
-            <ChefHat className="w-8 h-8 text-primary" />
-            <span className="font-serif text-xl font-bold">RecipeVault</span>
+          <div className="flex items-center gap-3 cursor-pointer" data-testid="link-logo">
+            <div className="relative">
+              <UtensilsCrossed className="w-7 h-7 text-primary" />
+              <div className="absolute inset-0 blur-sm bg-primary/30 -z-10" />
+            </div>
+            <span className="font-serif text-xl tracking-wide">RecipeVault</span>
           </div>
         </Link>
 
