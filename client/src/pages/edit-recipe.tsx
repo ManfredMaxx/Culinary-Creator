@@ -65,7 +65,10 @@ export default function EditRecipe() {
   const [cookTime, setCookTime] = useState<number | null>(null);
   const [ingredients, setIngredients] = useState<EditableIngredient[]>([]);
   const [steps, setSteps] = useState<EditableStep[]>([]);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverImageChanged, setCoverImageChanged] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const coverImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (recipe && !initialized) {
@@ -74,6 +77,7 @@ export default function EditRecipe() {
       setServings(recipe.servings);
       setPrepTime(recipe.prepTime);
       setCookTime(recipe.cookTime);
+      setCoverImage(recipe.coverImage || null);
       setIngredients(
         recipe.ingredients.map((ing) => ({
           name: ing.name,
@@ -95,7 +99,7 @@ export default function EditRecipe() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("PUT", `/api/recipes/${recipeId}`, {
+      const payload: any = {
         title,
         description,
         servings,
@@ -103,7 +107,14 @@ export default function EditRecipe() {
         cookTime,
         ingredients: ingredients.filter((ing) => ing.name.trim()),
         steps: steps.map((s, i) => ({ ...s, stepNumber: i + 1 })),
-      });
+      };
+      
+      // Only include coverImage if it was explicitly changed
+      if (coverImageChanged) {
+        payload.coverImage = coverImage;
+      }
+      
+      const response = await apiRequest("PUT", `/api/recipes/${recipeId}`, payload);
       return await response.json();
     },
     onSuccess: () => {
@@ -211,6 +222,29 @@ export default function EditRecipe() {
     setSteps([...steps, { stepNumber: steps.length + 1, instruction: "", duration: null }]);
   };
 
+  const handleCoverImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const convertedDataUrl = await convertToJpeg(file);
+      setCoverImage(convertedDataUrl);
+      setCoverImageChanged(true);
+    } catch (error) {
+      console.error("Error processing cover image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverImage(null);
+    setCoverImageChanged(true);
+  };
+
   const removeStep = (index: number) => {
     setSteps(steps.filter((_, i) => i !== index));
   };
@@ -285,6 +319,54 @@ export default function EditRecipe() {
               <CardTitle className="text-lg">Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label>Title Image</Label>
+                <input
+                  ref={coverImageInputRef}
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={handleCoverImageSelect}
+                  className="hidden"
+                  data-testid="input-cover-image"
+                />
+                {coverImage ? (
+                  <div className="relative mt-2">
+                    <img
+                      src={coverImage}
+                      alt="Cover"
+                      className="w-full h-48 object-cover rounded-lg border border-border"
+                      data-testid="img-cover-preview"
+                    />
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        onClick={() => coverImageInputRef.current?.click()}
+                        data-testid="button-change-cover"
+                      >
+                        <ImagePlus className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={removeCoverImage}
+                        data-testid="button-remove-cover"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => coverImageInputRef.current?.click()}
+                    className="mt-2 border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover-elevate transition-colors"
+                    data-testid="button-add-cover"
+                  >
+                    <ImagePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Click to add a title image</p>
+                  </div>
+                )}
+              </div>
               <div>
                 <Label htmlFor="title">Title</Label>
                 <Input

@@ -218,6 +218,7 @@ export async function registerRoutes(
     servings: z.number().optional().nullable(),
     prepTime: z.number().optional().nullable(),
     cookTime: z.number().optional().nullable(),
+    coverImage: z.string().optional().nullable(),
     ingredients: z.array(z.object({
       name: z.string(),
       quantity: z.string().optional(),
@@ -251,16 +252,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request body" });
       }
 
-      const { title, description, servings, prepTime, cookTime, ingredients, steps } = parseResult.data;
+      const { title, description, servings, prepTime, cookTime, coverImage, ingredients, steps } = parseResult.data;
 
       // Update the recipe
-      await storage.updateRecipe(id, {
+      const updateData: any = {
         title,
         description,
         servings: servings ?? null,
         prepTime: prepTime ?? null,
         cookTime: cookTime ?? null,
-      });
+      };
+      
+      // Only update coverImage if explicitly provided (allows setting to null)
+      if (coverImage !== undefined) {
+        updateData.coverImage = coverImage;
+      }
+      
+      await storage.updateRecipe(id, updateData);
 
       // Replace ingredients
       if (ingredients) {
