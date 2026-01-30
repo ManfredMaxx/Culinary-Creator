@@ -181,7 +181,33 @@ export default function EditRecipe() {
       });
       return await response.json();
     },
-    onSuccess: () => {
+    onMutate: async ({ imageId, stepId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/recipes", recipeId] });
+      
+      // Snapshot the previous value
+      const previousRecipe = queryClient.getQueryData(["/api/recipes", recipeId]);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(["/api/recipes", recipeId], (old: FullRecipe | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          images: old.images.map((img: RecipeImage) => 
+            img.id === imageId ? { ...img, stepId } : img
+          ),
+        };
+      });
+      
+      return { previousRecipe };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousRecipe) {
+        queryClient.setQueryData(["/api/recipes", recipeId], context.previousRecipe);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recipes", recipeId] });
     },
   });

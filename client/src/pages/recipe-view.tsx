@@ -235,7 +235,7 @@ export default function RecipeView() {
                         <span className="font-medium">
                           {ingredient.quantity} {ingredient.unit}
                         </span>{" "}
-                        {ingredient.name}
+                        {ingredient.name.charAt(0).toUpperCase() + ingredient.name.slice(1)}
                         {ingredient.notes && (
                           <span className="text-muted-foreground text-sm">
                             {" "}
