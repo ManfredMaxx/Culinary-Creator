@@ -273,7 +273,7 @@ export default function NewRecipe() {
                     <Label htmlFor="title">Recipe Title</Label>
                     <Input
                       id="title"
-                      value={recipePreview.title}
+                      value={recipePreview.title ?? ""}
                       onChange={(e) => updateRecipeField("title", e.target.value)}
                       data-testid="input-recipe-title"
                     />
@@ -282,7 +282,7 @@ export default function NewRecipe() {
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
-                      value={recipePreview.description}
+                      value={recipePreview.description ?? ""}
                       onChange={(e) => updateRecipeField("description", e.target.value)}
                       rows={3}
                       data-testid="input-recipe-description"
@@ -294,7 +294,7 @@ export default function NewRecipe() {
                       <Input
                         id="servings"
                         type="number"
-                        value={recipePreview.servings}
+                        value={recipePreview.servings ?? ""}
                         onChange={(e) => updateRecipeField("servings", parseInt(e.target.value) || 0)}
                         data-testid="input-servings"
                       />
@@ -304,7 +304,7 @@ export default function NewRecipe() {
                       <Input
                         id="prepTime"
                         type="number"
-                        value={recipePreview.prepTime}
+                        value={recipePreview.prepTime ?? ""}
                         onChange={(e) => updateRecipeField("prepTime", parseInt(e.target.value) || 0)}
                         data-testid="input-prep-time"
                       />
@@ -314,7 +314,7 @@ export default function NewRecipe() {
                       <Input
                         id="cookTime"
                         type="number"
-                        value={recipePreview.cookTime}
+                        value={recipePreview.cookTime ?? ""}
                         onChange={(e) => updateRecipeField("cookTime", parseInt(e.target.value) || 0)}
                         data-testid="input-cook-time"
                       />
@@ -334,21 +334,21 @@ export default function NewRecipe() {
                     <Input
                       className="col-span-2"
                       placeholder="Qty"
-                      value={ingredient.quantity}
+                      value={ingredient.quantity ?? ""}
                       onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
                       data-testid={`input-ingredient-qty-${index}`}
                     />
                     <Input
                       className="col-span-2"
                       placeholder="Unit"
-                      value={ingredient.unit}
+                      value={ingredient.unit ?? ""}
                       onChange={(e) => updateIngredient(index, "unit", e.target.value)}
                       data-testid={`input-ingredient-unit-${index}`}
                     />
                     <Input
                       className="col-span-8"
                       placeholder="Ingredient"
-                      value={ingredient.name}
+                      value={ingredient.name ?? ""}
                       onChange={(e) => updateIngredient(index, "name", e.target.value)}
                       data-testid={`input-ingredient-name-${index}`}
                     />
@@ -368,7 +368,7 @@ export default function NewRecipe() {
                       {recipeStep.stepNumber}
                     </div>
                     <Textarea
-                      value={recipeStep.instruction}
+                      value={recipeStep.instruction ?? ""}
                       onChange={(e) => updateStep(index, e.target.value)}
                       rows={2}
                       className="flex-1"
