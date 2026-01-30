@@ -102,8 +102,17 @@ export default function NewRecipe() {
         })
       );
 
-      const response = await apiRequest("POST", "/api/recipes", {
+      const transformedRecipe = {
         ...data.recipe,
+        ingredients: data.recipe.ingredients.map(ing => ({
+          ...ing,
+          quantity: ing.quantity != null ? String(ing.quantity) : "",
+          unit: ing.unit ?? "",
+        })),
+      };
+      
+      const response = await apiRequest("POST", "/api/recipes", {
+        ...transformedRecipe,
         images: imageData,
       });
       return await response.json() as FullRecipe;
