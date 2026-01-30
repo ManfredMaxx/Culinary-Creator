@@ -48,7 +48,7 @@ export default function NewRecipe() {
       });
 
       const response = await apiRequest("POST", "/api/transcribe-recipe", { audio: base64Audio });
-      return response as RecipePreview;
+      return await response.json() as RecipePreview;
     },
     onSuccess: (data) => {
       setRecipePreview(data);
@@ -81,7 +81,7 @@ export default function NewRecipe() {
       );
 
       const response = await apiRequest("POST", "/api/analyze-images", { images: imageData });
-      return response as { analyses: { description: string; suggestedStep: number }[] };
+      return await response.json() as { analyses: { description: string; suggestedStep: number }[] };
     },
   });
 
@@ -106,7 +106,7 @@ export default function NewRecipe() {
         ...data.recipe,
         images: imageData,
       });
-      return response as FullRecipe;
+      return await response.json() as FullRecipe;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/recipes"] });
