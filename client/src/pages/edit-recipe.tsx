@@ -68,6 +68,7 @@ export default function EditRecipe() {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [coverImageChanged, setCoverImageChanged] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [photoFilter, setPhotoFilter] = useState<"all" | "unassigned">("all");
   const coverImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -286,6 +287,56 @@ export default function EditRecipe() {
   };
 
   const unassignedImages = recipe.images.filter((img) => !img.stepId);
+
+  // Check if an image matches the cover image
+  const isCoverImage = (img: RecipeImage): boolean => {
+    if (!coverImage) return false;
+    const imgUrl = img.imageUrl || `data:image/jpeg;base64,${img.imageData}`;
+    return imgUrl === coverImage;
+  };
+
+  // Get indicator for where an image is used
+  const getImageIndicator = (img: RecipeImage): { type: "step" | "cover"; label: string } | null => {
+    if (isCoverImage(img)) {
+      return { type: "cover", label: "C" };
+    }
+    if (img.stepId) {
+      const step = recipe.steps.find(s => s.id === img.stepId);
+      return step ? { type: "step", label: String(step.stepNumber) } : null;
+    }
+    return null;
+  };
+
+  // Build cover image item for display (if exists and from recipe images)
+  type CoverOnlyImage = { id: "cover"; isCoverOnly: true; imageUrl: string };
+  type DisplayImage = RecipeImage | CoverOnlyImage;
+  
+  // All images for "All Photos" view - include cover if it exists but isn't in recipe.images
+  const coverExistsInImages = coverImage && recipe.images.some(img => {
+    const imgUrl = img.imageUrl || `data:image/jpeg;base64,${img.imageData}`;
+    return imgUrl === coverImage;
+  });
+  
+  const coverOnlyItem: CoverOnlyImage | null = coverImage && !coverExistsInImages 
+    ? { id: "cover", isCoverOnly: true as const, imageUrl: coverImage } 
+    : null;
+  
+  const allImages: DisplayImage[] = [
+    // Add cover as standalone item if it exists but isn't from recipe.images
+    ...(coverOnlyItem ? [coverOnlyItem] : []),
+    ...recipe.images,
+  ];
+
+  // Images to display based on current filter
+  const displayedImages: DisplayImage[] = photoFilter === "all" ? allImages : unassignedImages;
+
+  // Handler to set an image as cover
+  const setImageAsCover = async (img: RecipeImage) => {
+    const imageUrl = img.imageUrl || `data:image/jpeg;base64,${img.imageData}`;
+    setCoverImage(imageUrl);
+    setCoverImageChanged(true);
+    toast({ title: "Cover image updated", description: "Save changes to apply." });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -567,11 +618,33 @@ export default function EditRecipe() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle className="text-lg">Additional Photos</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} data-testid="button-add-photo">
-                <ImagePlus className="w-4 h-4 mr-1" /> Add Photo
-              </Button>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-lg">Photos</CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-md border border-border overflow-hidden">
+                  <Button
+                    variant={photoFilter === "all" ? "default" : "ghost"}
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setPhotoFilter("all")}
+                    data-testid="button-filter-all"
+                  >
+                    All Photos
+                  </Button>
+                  <Button
+                    variant={photoFilter === "unassigned" ? "default" : "ghost"}
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setPhotoFilter("unassigned")}
+                    data-testid="button-filter-unassigned"
+                  >
+                    Additional photos
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} data-testid="button-add-photo">
+                  <ImagePlus className="w-4 h-4 mr-1" /> Add
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <input
@@ -589,52 +662,97 @@ export default function EditRecipe() {
                 onChange={(e) => handleFileSelect(e, selectedStepForImage ?? undefined)}
                 className="hidden"
               />
-              {unassignedImages.length > 0 ? (
+              {displayedImages.length > 0 ? (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                  {unassignedImages.map((img) => (
-                    <div key={img.id} className="relative group aspect-square">
-                      <img
-                        src={img.imageUrl || `data:image/jpeg;base64,${img.imageData}`}
-                        alt={img.stageDescription || "Recipe photo"}
-                        className="w-full h-full object-cover rounded-md"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex flex-col items-center justify-center gap-2">
-                        <Select
-                          value=""
-                          onValueChange={(value) => {
-                            if (value) {
-                              updateImageStepMutation.mutate({
-                                imageId: img.id,
-                                stepId: parseInt(value),
-                              });
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-32 bg-white/90 text-xs h-8">
-                            <SelectValue placeholder="Assign to step" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {recipe.steps.map((s) => (
-                              <SelectItem key={s.id} value={s.id.toString()}>
-                                Step {s.stepNumber}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteImageMutation.mutate(img.id)}
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" /> Remove
-                        </Button>
+                  {displayedImages.map((img) => {
+                    const isCoverOnly = "isCoverOnly" in img && img.isCoverOnly;
+                    const imgUrl = isCoverOnly ? img.imageUrl : (img.imageUrl || `data:image/jpeg;base64,${(img as RecipeImage).imageData}`);
+                    const indicator = isCoverOnly ? { type: "cover" as const, label: "C" } : getImageIndicator(img as RecipeImage);
+                    
+                    return (
+                      <div key={img.id} className="relative group aspect-square">
+                        <img
+                          src={imgUrl}
+                          alt={isCoverOnly ? "Cover photo" : ((img as RecipeImage).stageDescription || "Recipe photo")}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                        {indicator && (
+                          <div 
+                            className={`absolute top-1 left-1 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
+                              indicator.type === "cover" 
+                                ? "bg-amber-500 text-white" 
+                                : "bg-primary text-primary-foreground"
+                            }`}
+                            title={indicator.type === "cover" ? "Cover" : `Step ${indicator.label}`}
+                            data-testid={indicator.type === "cover" ? "indicator-cover" : `indicator-step-${indicator.label}`}
+                          >
+                            {indicator.label}
+                          </div>
+                        )}
+                        {isCoverOnly ? (
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex flex-col items-center justify-center gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setCoverImage(null);
+                                setCoverImageChanged(true);
+                              }}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" /> Remove Cover
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex flex-col items-center justify-center gap-2">
+                            <Select
+                              value=""
+                              onValueChange={(value) => {
+                                if (value === "cover") {
+                                  setImageAsCover(img as RecipeImage);
+                                } else if (value === "none") {
+                                  updateImageStepMutation.mutate({
+                                    imageId: (img as RecipeImage).id,
+                                    stepId: null,
+                                  });
+                                } else if (value) {
+                                  updateImageStepMutation.mutate({
+                                    imageId: (img as RecipeImage).id,
+                                    stepId: parseInt(value),
+                                  });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-32 bg-white/90 text-xs h-8">
+                                <SelectValue placeholder="Assign to..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cover">Cover</SelectItem>
+                                <SelectItem value="none">Unassign</SelectItem>
+                                {recipe.steps.map((s) => (
+                                  <SelectItem key={s.id} value={s.id.toString()}>
+                                    Step {s.stepNumber}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteImageMutation.mutate((img as RecipeImage).id)}
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" /> Remove
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground text-sm text-center py-8">
-                  No additional photos. Click "Add Photo" to upload images.
+                  {photoFilter === "all" 
+                    ? "No photos yet. Click \"Add Photo\" to upload images."
+                    : "No unassigned photos. All photos are assigned to steps or the cover."}
                 </p>
               )}
             </CardContent>
