@@ -329,7 +329,7 @@ export default function NewRecipe() {
                 <CardTitle>Ingredients</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recipePreview.ingredients.map((ingredient, index) => (
+                {(recipePreview.ingredients || []).map((ingredient, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2">
                     <Input
                       className="col-span-2"
@@ -362,7 +362,7 @@ export default function NewRecipe() {
                 <CardTitle>Instructions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recipePreview.steps.map((recipeStep, index) => (
+                {(recipePreview.steps || []).map((recipeStep, index) => (
                   <div key={index} className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium flex-shrink-0">
                       {recipeStep.stepNumber}
