@@ -8,7 +8,8 @@ The application features:
 - Voice-to-recipe transcription using AI
 - Photo capture and AI-powered cooking stage recognition
 - Recipe management (create, view, edit, delete)
-- Printable recipe book generation
+- Recipe book generation with HTML and PDF export options
+- Beautiful Michelin-star themed cookbook formatting
 - User authentication via Replit Auth
 
 ## User Preferences
@@ -91,3 +92,4 @@ The app uses Replit Auth with OIDC. Users authenticate through Replit's identity
 - `express-session` / `connect-pg-simple`: Session management
 - `@tanstack/react-query`: Client-side data fetching
 - `@radix-ui/*`: Accessible UI primitives for shadcn/ui components
+- `puppeteer-core`: PDF generation from HTML (uses system chromium)
