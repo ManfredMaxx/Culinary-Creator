@@ -287,11 +287,34 @@ export async function registerRoutes(
         }
       }
 
-      // Replace steps
+      // Replace steps while preserving image associations
       if (steps) {
+        // Get current steps and their images before deletion
+        const oldSteps = await storage.getStepsByRecipe(id);
+        const images = await storage.getImagesByRecipe(id);
+        
+        // Build map: stepNumber -> imageIds for images assigned to old steps
+        const stepNumberToImages: Map<number, number[]> = new Map();
+        for (const oldStep of oldSteps) {
+          const stepImages = images.filter(img => img.stepId === oldStep.id);
+          if (stepImages.length > 0) {
+            stepNumberToImages.set(oldStep.stepNumber, stepImages.map(img => img.id));
+          }
+        }
+        
+        // Clear stepId on all images that were assigned to steps (will be re-assigned after new steps are created)
+        for (const oldStep of oldSteps) {
+          for (const img of images) {
+            if (img.stepId === oldStep.id) {
+              await storage.updateImage(img.id, { stepId: null });
+            }
+          }
+        }
+        
+        // Delete old steps and create new ones
         await storage.deleteStepsByRecipe(id);
         if (steps.length > 0) {
-          await storage.createSteps(
+          const newSteps = await storage.createSteps(
             steps.map((step) => ({
               recipeId: id,
               stepNumber: step.stepNumber,
@@ -301,6 +324,16 @@ export async function registerRoutes(
               imageDescription: null,
             }))
           );
+          
+          // Re-assign images to new steps based on stepNumber
+          for (const newStep of newSteps) {
+            const imageIds = stepNumberToImages.get(newStep.stepNumber);
+            if (imageIds) {
+              for (const imageId of imageIds) {
+                await storage.updateImage(imageId, { stepId: newStep.id });
+              }
+            }
+          }
         }
       }
 
