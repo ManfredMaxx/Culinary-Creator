@@ -126,10 +126,12 @@ function generateTableOfContents(recipes: RecipeWithDetails[]): string {
 
   return `
     <div class="toc-page">
-      <h2 class="toc-heading">Table of Contents</h2>
-      <ul class="toc-list">
-        ${entries}
-      </ul>
+      <div class="toc-content-wrapper">
+        <h2 class="toc-heading">Table of Contents</h2>
+        <ul class="toc-list">
+          ${entries}
+        </ul>
+      </div>
       <div class="page-footer">
         <span class="page-number">2</span>
       </div>
@@ -277,12 +279,23 @@ export function generateRecipeBookHtml(data: BookData): string {
 
     /* Table of Contents */
     .toc-page {
-      min-height: 100vh;
+      height: 100vh;
       padding: 4rem 3rem;
       background: var(--color-cream);
       page-break-after: always;
       page-break-inside: avoid;
+      break-inside: avoid;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
       position: relative;
+    }
+
+    .toc-content-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     .toc-heading {
@@ -299,6 +312,7 @@ export function generateRecipeBookHtml(data: BookData): string {
       max-width: 500px;
       margin: 0 auto;
       page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .toc-entry {
@@ -307,6 +321,13 @@ export function generateRecipeBookHtml(data: BookData): string {
       padding: 0.8rem 0;
       border-bottom: 1px solid rgba(217, 164, 65, 0.2);
       page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .toc-page .page-footer {
+      position: static;
+      margin-top: auto;
+      padding-bottom: 1rem;
     }
 
     .toc-title {
