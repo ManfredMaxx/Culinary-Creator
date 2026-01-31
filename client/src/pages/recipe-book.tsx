@@ -81,7 +81,7 @@ export default function RecipeBook() {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" asChild data-testid="link-back">
@@ -89,26 +89,28 @@ export default function RecipeBook() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
           </Button>
-          <div>
-            <h1 className="font-serif text-3xl font-bold">Create Recipe Book</h1>
-            <p className="text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold">Create Recipe Book</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Select recipes to include in your printable book
             </p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8">
           <div className="md:col-span-2 space-y-6">
             <Card>
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-lg">Select Recipes</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAll} data-testid="button-select-all">
-                    Select All
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={deselectAll} data-testid="button-deselect-all">
-                    Clear
-                  </Button>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <CardTitle className="text-lg">Select Recipes</CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={selectAll} data-testid="button-select-all">
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={deselectAll} data-testid="button-deselect-all">
+                      Clear
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -130,15 +132,15 @@ export default function RecipeBook() {
                     {recipes.map((recipe) => (
                       <label
                         key={recipe.id}
-                        className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover-elevate border overflow-hidden"
+                        className="flex items-start gap-3 p-3 rounded-lg cursor-pointer hover-elevate border"
                         data-testid={`recipe-select-${recipe.id}`}
                       >
                         <Checkbox
                           checked={selectedRecipes.includes(recipe.id)}
                           onCheckedChange={() => toggleRecipe(recipe.id)}
-                          className="flex-shrink-0"
+                          className="flex-shrink-0 mt-1"
                         />
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded bg-muted flex-shrink-0 overflow-hidden">
+                        <div className="w-12 h-12 rounded bg-muted flex-shrink-0 overflow-hidden">
                           {recipe.coverImage ? (
                             <img
                               src={recipe.coverImage}
@@ -147,20 +149,20 @@ export default function RecipeBook() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                              <FileText className="w-5 h-5 text-muted-foreground" />
                             </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <h3 className="font-medium truncate">{recipe.title}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium break-words">{recipe.title}</h3>
                           {recipe.description && (
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
                               {recipe.description}
                             </p>
                           )}
                         </div>
                         {selectedRecipes.includes(recipe.id) && (
-                          <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                          <Check className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
                         )}
                       </label>
                     ))}
