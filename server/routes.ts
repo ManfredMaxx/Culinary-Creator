@@ -94,6 +94,7 @@ export async function registerRoutes(
   const recipeBookSchema = z.object({
     title: z.string().optional(),
     recipeIds: z.array(z.number()).min(1, "At least one recipe ID is required"),
+    includeStepImages: z.boolean().optional(),
   });
 
   // Create new recipe
@@ -600,6 +601,10 @@ Return ONLY valid JSON, no additional text.`,
     };
   }
 
+  function addIncludeStepImages(bookData: any, includeStepImages: boolean) {
+    return { ...bookData, includeStepImages };
+  }
+
   // Generate recipe book HTML
   app.post("/api/recipes/book/html", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -607,10 +612,11 @@ Return ONLY valid JSON, no additional text.`,
       if (!parseResult.success) {
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request" });
       }
-      const { title, recipeIds } = parseResult.data;
+      const { title, recipeIds, includeStepImages } = parseResult.data;
       const userId = (req.user as any).claims.sub;
 
-      const bookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const bookData = addIncludeStepImages(baseBookData, includeStepImages !== false);
       const html = generateBookTemplate(bookData);
       
       res.setHeader("Content-Type", "text/html");
@@ -629,10 +635,11 @@ Return ONLY valid JSON, no additional text.`,
       if (!parseResult.success) {
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request" });
       }
-      const { title, recipeIds } = parseResult.data;
+      const { title, recipeIds, includeStepImages } = parseResult.data;
       const userId = (req.user as any).claims.sub;
 
-      const bookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const bookData = addIncludeStepImages(baseBookData, includeStepImages !== false);
       const html = generateBookTemplate(bookData);
 
       // Launch puppeteer to generate PDF

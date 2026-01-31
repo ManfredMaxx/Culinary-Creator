@@ -27,6 +27,7 @@ export default function RecipeBook() {
   const [bookTitle, setBookTitle] = useState("My Recipe Collection");
   const [generateHtml, setGenerateHtml] = useState(true);
   const [generatePdf, setGeneratePdf] = useState(true);
+  const [includeStepImages, setIncludeStepImages] = useState(true);
 
   const { data: recipes, isLoading } = useQuery<Recipe[]>({
     queryKey: ["/api/recipes"],
@@ -40,6 +41,7 @@ export default function RecipeBook() {
         body: JSON.stringify({
           title: bookTitle,
           recipeIds: selectedRecipes,
+          includeStepImages,
         }),
       });
       if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
@@ -246,6 +248,23 @@ export default function RecipeBook() {
                       </div>
                     </label>
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Image Options</Label>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+                    <Checkbox
+                      checked={includeStepImages}
+                      onCheckedChange={(checked) => setIncludeStepImages(checked === true)}
+                      data-testid="checkbox-step-images"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">Include images from each step</p>
+                      <p className="text-xs text-muted-foreground">
+                        Show photos attached to individual cooking steps
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
                 <div className="p-4 bg-muted rounded-lg">

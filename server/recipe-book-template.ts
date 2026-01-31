@@ -9,6 +9,7 @@ interface RecipeWithDetails extends Recipe {
 interface BookData {
   title: string;
   recipes: RecipeWithDetails[];
+  includeStepImages?: boolean;
 }
 
 function escapeHtml(text: string | null | undefined): string {
@@ -29,7 +30,7 @@ function formatTime(minutes: number | null | undefined): string {
   return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
 }
 
-function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number): string {
+function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number, includeStepImages: boolean = true): string {
   const coverImage = recipe.coverImage || recipe.images?.[0]?.imageUrl;
   
   const ingredientsList = recipe.ingredients
@@ -44,7 +45,7 @@ function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number): stri
   const stepsList = recipe.steps
     .sort((a, b) => a.stepNumber - b.stepNumber)
     .map(step => {
-      const stepImage = step.imageUrl 
+      const stepImage = (includeStepImages && step.imageUrl)
         ? `<img src="${step.imageUrl}" alt="Step ${step.stepNumber}" class="step-image" />`
         : "";
       return `
@@ -152,10 +153,11 @@ function generateCoverPage(title: string, recipeCount: number): string {
 }
 
 export function generateRecipeBookHtml(data: BookData): string {
+  const includeStepImages = data.includeStepImages !== false;
   const coverPage = generateCoverPage(data.title, data.recipes.length);
   const tocPage = generateTableOfContents(data.recipes);
   const recipePages = data.recipes
-    .map((recipe, index) => generateRecipePage(recipe, index + 3))
+    .map((recipe, index) => generateRecipePage(recipe, index + 3, includeStepImages))
     .join("\n");
 
   return `<!DOCTYPE html>
@@ -279,6 +281,7 @@ export function generateRecipeBookHtml(data: BookData): string {
       padding: 4rem 3rem;
       background: var(--color-cream);
       page-break-after: always;
+      page-break-inside: avoid;
       position: relative;
     }
 
@@ -295,6 +298,7 @@ export function generateRecipeBookHtml(data: BookData): string {
       list-style: none;
       max-width: 500px;
       margin: 0 auto;
+      page-break-inside: avoid;
     }
 
     .toc-entry {
@@ -302,6 +306,7 @@ export function generateRecipeBookHtml(data: BookData): string {
       align-items: baseline;
       padding: 0.8rem 0;
       border-bottom: 1px solid rgba(217, 164, 65, 0.2);
+      page-break-inside: avoid;
     }
 
     .toc-title {
