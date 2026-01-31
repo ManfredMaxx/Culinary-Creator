@@ -2,9 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
 import OpenAI from "openai";
+import puppeteer from "puppeteer-core";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
+import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
 import { z } from "zod";
 
 const openai = new OpenAI({
@@ -547,8 +549,59 @@ Return ONLY valid JSON, no additional text.`,
     }
   });
 
-  // Generate recipe book HTML (printable)
-  app.post("/api/recipes/book", isAuthenticated, async (req: Request, res: Response) => {
+  // Helper function to prepare recipe data for book generation
+  async function prepareBookData(recipeIds: number[], userId: string, title: string) {
+    // Fetch all recipes with full details
+    const recipes = await Promise.all(
+      recipeIds.map((id: number) => storage.getRecipeWithDetails(id))
+    );
+
+    // Filter out null recipes and check ownership (including seed demo recipes)
+    const validRecipes = recipes.filter(
+      (recipe) => recipe && (recipe.userId === userId || recipe.userId === "seed-demo-user")
+    );
+
+    if (validRecipes.length === 0) {
+      throw new Error("No valid recipes found");
+    }
+
+    // Process images to embed as base64 data URLs
+    const processedRecipes = validRecipes.map((recipe: any) => {
+      // Convert cover image if it's base64 data
+      const coverImage = recipe.coverImage || 
+        (recipe.images?.[0]?.imageData ? `data:image/jpeg;base64,${recipe.images[0].imageData}` : null);
+
+      // Process step images
+      const steps = recipe.steps.map((step: any) => {
+        const stepImage = recipe.images?.find((img: any) => img.stepId === step.id);
+        return {
+          ...step,
+          imageUrl: stepImage?.imageData ? `data:image/jpeg;base64,${stepImage.imageData}` : null,
+        };
+      });
+
+      // Process additional images
+      const images = recipe.images?.map((img: any) => ({
+        ...img,
+        imageUrl: img.imageData ? `data:image/jpeg;base64,${img.imageData}` : img.imageUrl,
+      })) || [];
+
+      return {
+        ...recipe,
+        coverImage,
+        steps,
+        images,
+      };
+    });
+
+    return {
+      title: title || "My Recipe Collection",
+      recipes: processedRecipes,
+    };
+  }
+
+  // Generate recipe book HTML
+  app.post("/api/recipes/book/html", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const parseResult = recipeBookSchema.safeParse(req.body);
       if (!parseResult.success) {
@@ -557,29 +610,55 @@ Return ONLY valid JSON, no additional text.`,
       const { title, recipeIds } = parseResult.data;
       const userId = (req.user as any).claims.sub;
 
-      // Fetch all recipes
-      const recipes = await Promise.all(
-        recipeIds.map((id: number) => storage.getRecipeWithDetails(id))
-      );
-
-      // Filter out null recipes and check ownership (including seed demo recipes)
-      const validRecipes = recipes.filter(
-        (recipe) => recipe && (recipe.userId === userId || recipe.userId === "seed-demo-user")
-      );
-
-      if (validRecipes.length === 0) {
-        return res.status(400).json({ error: "No valid recipes found" });
-      }
-
-      // Generate HTML for the recipe book
-      const html = generateRecipeBookHtml(title || "My Recipe Collection", validRecipes as any);
+      const bookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const html = generateBookTemplate(bookData);
       
       res.setHeader("Content-Type", "text/html");
       res.setHeader("Content-Disposition", `attachment; filename="${title || "recipe-book"}.html"`);
       res.send(html);
-    } catch (error) {
-      console.error("Error generating recipe book:", error);
-      res.status(500).json({ error: "Failed to generate recipe book" });
+    } catch (error: any) {
+      console.error("Error generating HTML recipe book:", error);
+      res.status(500).json({ error: error.message || "Failed to generate HTML recipe book" });
+    }
+  });
+
+  // Generate recipe book PDF
+  app.post("/api/recipes/book/pdf", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const parseResult = recipeBookSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request" });
+      }
+      const { title, recipeIds } = parseResult.data;
+      const userId = (req.user as any).claims.sub;
+
+      const bookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
+      const html = generateBookTemplate(bookData);
+
+      // Launch puppeteer to generate PDF
+      const browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium",
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      });
+
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "networkidle0" });
+
+      const pdf = await page.pdf({
+        format: "Letter",
+        printBackground: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      });
+
+      await browser.close();
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${title || "recipe-book"}.pdf"`);
+      res.send(pdf);
+    } catch (error: any) {
+      console.error("Error generating PDF recipe book:", error);
+      res.status(500).json({ error: error.message || "Failed to generate PDF recipe book" });
     }
   });
 

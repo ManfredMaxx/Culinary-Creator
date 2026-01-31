@@ -8,6 +8,8 @@ import {
   Download,
   Loader2,
   FileText,
+  FileCode,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,14 +25,16 @@ export default function RecipeBook() {
   const { toast } = useToast();
   const [selectedRecipes, setSelectedRecipes] = useState<number[]>([]);
   const [bookTitle, setBookTitle] = useState("My Recipe Collection");
+  const [generateHtml, setGenerateHtml] = useState(true);
+  const [generatePdf, setGeneratePdf] = useState(true);
 
   const { data: recipes, isLoading } = useQuery<Recipe[]>({
     queryKey: ["/api/recipes"],
   });
 
   const generateBookMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/recipes/book", {
+    mutationFn: async (format: "html" | "pdf") => {
+      const response = await fetch(`/api/recipes/book/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -38,31 +42,42 @@ export default function RecipeBook() {
           recipeIds: selectedRecipes,
         }),
       });
-      if (!response.ok) throw new Error("Failed to generate book");
-      return response.blob();
+      if (!response.ok) throw new Error(`Failed to generate ${format.toUpperCase()}`);
+      return { blob: await response.blob(), format };
     },
-    onSuccess: (blob) => {
+    onSuccess: ({ blob, format }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${bookTitle.replace(/\s+/g, "_")}.html`;
+      a.download = `${bookTitle.replace(/\s+/g, "_")}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast({
-        title: "Recipe book generated!",
-        description: "Open the file in a browser and print to PDF for best results.",
+        title: `${format.toUpperCase()} generated!`,
+        description: format === "html" 
+          ? "Open the file in a browser to view your recipe book."
+          : "Your beautiful recipe book PDF is ready!",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to generate recipe book. Please try again.",
+        description: error.message || "Failed to generate recipe book. Please try again.",
         variant: "destructive",
       });
     },
   });
+
+  const handleGenerate = async () => {
+    if (generateHtml) {
+      await generateBookMutation.mutateAsync("html");
+    }
+    if (generatePdf) {
+      await generateBookMutation.mutateAsync("pdf");
+    }
+  };
 
   const toggleRecipe = (id: number) => {
     setSelectedRecipes((prev) =>
@@ -198,6 +213,41 @@ export default function RecipeBook() {
                     data-testid="input-book-title"
                   />
                 </div>
+
+                <div className="space-y-3">
+                  <Label>Export Formats</Label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+                      <Checkbox
+                        checked={generateHtml}
+                        onCheckedChange={(checked) => setGenerateHtml(checked === true)}
+                        data-testid="checkbox-html"
+                      />
+                      <FileCode className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">HTML File</p>
+                        <p className="text-xs text-muted-foreground">
+                          View in browser, easy sharing
+                        </p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate">
+                      <Checkbox
+                        checked={generatePdf}
+                        onCheckedChange={(checked) => setGeneratePdf(checked === true)}
+                        data-testid="checkbox-pdf"
+                      />
+                      <FileDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">PDF Document</p>
+                        <p className="text-xs text-muted-foreground">
+                          Print-ready, beautifully formatted
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="p-4 bg-muted rounded-lg">
                   <p className="text-sm font-medium">
                     {selectedRecipes.length} recipe{selectedRecipes.length !== 1 ? "s" : ""}{" "}
@@ -216,8 +266,8 @@ export default function RecipeBook() {
                   <Button
                     className="w-full"
                     size="lg"
-                    onClick={() => generateBookMutation.mutate()}
-                    disabled={selectedRecipes.length === 0 || generateBookMutation.isPending}
+                    onClick={handleGenerate}
+                    disabled={selectedRecipes.length === 0 || (!generateHtml && !generatePdf) || generateBookMutation.isPending}
                     data-testid="button-generate-book"
                   >
                     {generateBookMutation.isPending ? (
@@ -235,6 +285,11 @@ export default function RecipeBook() {
                   {selectedRecipes.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center">
                       Select at least one recipe to generate a book
+                    </p>
+                  )}
+                  {selectedRecipes.length > 0 && !generateHtml && !generatePdf && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Select at least one export format
                     </p>
                   )}
                 </div>
