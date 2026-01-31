@@ -10,6 +10,7 @@ import {
   Loader2,
   Save,
   GripVertical,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { convertToJpeg } from "@/lib/image-utils";
@@ -603,23 +611,48 @@ export default function EditRecipe() {
                         </div>
                         {stepImages.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {stepImages.map((img) => (
-                              <div key={img.id} className="relative group w-24 h-24">
-                                <img
-                                  src={img.imageUrl || `data:image/jpeg;base64,${img.imageData}`}
-                                  alt={img.stageDescription || "Step photo"}
-                                  className="w-full h-full object-cover rounded-md"
-                                />
-                                <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute -top-2 -right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => deleteImageMutation.mutate(img.id)}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            ))}
+                            {stepImages.map((img) => {
+                              const otherSteps = recipe.steps.filter(s => s.id !== stepFromRecipe?.id);
+                              return (
+                                <div key={img.id} className="relative group w-24 h-24">
+                                  <img
+                                    src={img.imageUrl || `data:image/jpeg;base64,${img.imageData}`}
+                                    alt={img.stageDescription || "Step photo"}
+                                    className="w-full h-full object-cover rounded-md"
+                                  />
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute -top-2 -right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        data-testid={`button-step-image-menu-${img.id}`}
+                                      >
+                                        <MoreVertical className="w-3 h-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {otherSteps.map((otherStep) => (
+                                        <DropdownMenuItem
+                                          key={otherStep.id}
+                                          onClick={() => updateImageStepMutation.mutate({ imageId: img.id, stepId: otherStep.id })}
+                                          data-testid={`menu-move-to-step-${otherStep.stepNumber}`}
+                                        >
+                                          Move to Step {otherStep.stepNumber}
+                                        </DropdownMenuItem>
+                                      ))}
+                                      {otherSteps.length > 0 && <DropdownMenuSeparator />}
+                                      <DropdownMenuItem
+                                        onClick={() => updateImageStepMutation.mutate({ imageId: img.id, stepId: null })}
+                                        data-testid="menu-remove-from-step"
+                                      >
+                                        Remove from step
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
