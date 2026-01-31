@@ -81,7 +81,7 @@ export default function RecipeBook() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" asChild data-testid="link-back">
@@ -100,7 +100,7 @@ export default function RecipeBook() {
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2 space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-lg">Select Recipes</CardTitle>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={selectAll} data-testid="button-select-all">
@@ -130,14 +130,15 @@ export default function RecipeBook() {
                     {recipes.map((recipe) => (
                       <label
                         key={recipe.id}
-                        className="flex items-center gap-4 p-3 rounded-lg cursor-pointer hover-elevate border"
+                        className="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover-elevate border overflow-hidden"
                         data-testid={`recipe-select-${recipe.id}`}
                       >
                         <Checkbox
                           checked={selectedRecipes.includes(recipe.id)}
                           onCheckedChange={() => toggleRecipe(recipe.id)}
+                          className="flex-shrink-0"
                         />
-                        <div className="w-16 h-16 rounded bg-muted flex-shrink-0 overflow-hidden">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded bg-muted flex-shrink-0 overflow-hidden">
                           {recipe.coverImage ? (
                             <img
                               src={recipe.coverImage}
@@ -146,11 +147,11 @@ export default function RecipeBook() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-muted-foreground" />
+                              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                             </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <h3 className="font-medium truncate">{recipe.title}</h3>
                           {recipe.description && (
                             <p className="text-sm text-muted-foreground truncate">
