@@ -275,38 +275,38 @@ export default function RecipeView() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild data-testid="link-back">
-              <Link href="/">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="font-serif text-3xl font-bold" data-testid="text-recipe-title">
-                {recipe.title}
-              </h1>
-              {recipe.description && (
-                <p className="text-muted-foreground mt-1">{recipe.description}</p>
-              )}
-              {recipe.author && (
-                <Link href={`/user/${recipe.author.id}`}>
-                  <div className="flex items-center gap-2 mt-2 hover:opacity-80" data-testid="link-author">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={recipe.author.profileImageUrl || undefined} alt={getDisplayName()} />
-                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                        {getInitials()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">
-                      by <span className="text-foreground font-medium">{getDisplayName()}</span>
-                    </span>
-                  </div>
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+        <div className="mb-8">
+          <Button variant="ghost" size="icon" asChild className="mb-4" data-testid="link-back">
+            <Link href="/">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+          </Button>
+          
+          <h1 className="font-serif text-3xl font-bold" data-testid="text-recipe-title">
+            {recipe.title}
+          </h1>
+          
+          {recipe.description && (
+            <p className="text-muted-foreground mt-2">{recipe.description}</p>
+          )}
+          
+          {recipe.author && (
+            <Link href={`/user/${recipe.author.id}`}>
+              <div className="flex items-center gap-2 mt-3 hover:opacity-80" data-testid="link-author">
+                <Avatar className="w-6 h-6">
+                  <AvatarImage src={recipe.author.profileImageUrl || undefined} alt={getDisplayName()} />
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  by <span className="text-foreground font-medium">{getDisplayName()}</span>
+                </span>
+              </div>
+            </Link>
+          )}
+          
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button
               variant="outline"
               size="sm"
