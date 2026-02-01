@@ -3,6 +3,9 @@ import {
   ingredients,
   recipeSteps,
   recipeImages,
+  follows,
+  recipeLikes,
+  users,
   type Recipe,
   type InsertRecipe,
   type Ingredient,
@@ -12,9 +15,13 @@ import {
   type RecipeImage,
   type InsertRecipeImage,
   type FullRecipe,
+  type Follow,
+  type RecipeLike,
+  type SocialRecipe,
+  type User,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, ne, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   // Recipes
@@ -45,6 +52,28 @@ export interface IStorage {
   updateImage(id: number, image: Partial<InsertRecipeImage>): Promise<RecipeImage | undefined>;
   deleteImage(id: number): Promise<void>;
   deleteImagesByRecipe(recipeId: number): Promise<void>;
+
+  // Follows
+  followUser(followerId: string, followingId: string): Promise<Follow>;
+  unfollowUser(followerId: string, followingId: string): Promise<void>;
+  getFollowers(userId: string): Promise<User[]>;
+  getFollowing(userId: string): Promise<User[]>;
+  isFollowing(followerId: string, followingId: string): Promise<boolean>;
+  getFollowerCount(userId: string): Promise<number>;
+  getFollowingCount(userId: string): Promise<number>;
+
+  // Likes
+  likeRecipe(userId: string, recipeId: number): Promise<RecipeLike>;
+  unlikeRecipe(userId: string, recipeId: number): Promise<void>;
+  isRecipeLiked(userId: string, recipeId: number): Promise<boolean>;
+  getLikeCount(recipeId: number): Promise<number>;
+  getLikedRecipesByUser(userId: string): Promise<Recipe[]>;
+
+  // Social / Explore
+  getPublicRecipes(limit?: number, offset?: number, excludeUserId?: string): Promise<SocialRecipe[]>;
+  getPublicRecipesByUser(userId: string): Promise<Recipe[]>;
+  getRecipesFromFollowing(userId: string, limit?: number, offset?: number): Promise<SocialRecipe[]>;
+  getUserById(userId: string): Promise<User | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -179,6 +208,240 @@ export class DatabaseStorage implements IStorage {
 
   async deleteImagesByRecipe(recipeId: number): Promise<void> {
     await db.delete(recipeImages).where(eq(recipeImages.recipeId, recipeId));
+  }
+
+  // Follows
+  async followUser(followerId: string, followingId: string): Promise<Follow> {
+    const [follow] = await db
+      .insert(follows)
+      .values({ followerId, followingId })
+      .returning();
+    return follow;
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<void> {
+    await db
+      .delete(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+  }
+
+  async getFollowers(userId: string): Promise<User[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        colorTheme: users.colorTheme,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(follows)
+      .innerJoin(users, eq(follows.followerId, users.id))
+      .where(eq(follows.followingId, userId));
+    return result;
+  }
+
+  async getFollowing(userId: string): Promise<User[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        colorTheme: users.colorTheme,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(follows)
+      .innerJoin(users, eq(follows.followingId, users.id))
+      .where(eq(follows.followerId, userId));
+    return result;
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+    return !!result;
+  }
+
+  async getFollowerCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+    return result?.count || 0;
+  }
+
+  async getFollowingCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+    return result?.count || 0;
+  }
+
+  // Likes
+  async likeRecipe(userId: string, recipeId: number): Promise<RecipeLike> {
+    const [like] = await db
+      .insert(recipeLikes)
+      .values({ userId, recipeId })
+      .returning();
+    return like;
+  }
+
+  async unlikeRecipe(userId: string, recipeId: number): Promise<void> {
+    await db
+      .delete(recipeLikes)
+      .where(and(eq(recipeLikes.userId, userId), eq(recipeLikes.recipeId, recipeId)));
+  }
+
+  async isRecipeLiked(userId: string, recipeId: number): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(recipeLikes)
+      .where(and(eq(recipeLikes.userId, userId), eq(recipeLikes.recipeId, recipeId)));
+    return !!result;
+  }
+
+  async getLikeCount(recipeId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(recipeLikes)
+      .where(eq(recipeLikes.recipeId, recipeId));
+    return result?.count || 0;
+  }
+
+  async getLikedRecipesByUser(userId: string): Promise<Recipe[]> {
+    const result = await db
+      .select({
+        id: recipes.id,
+        userId: recipes.userId,
+        title: recipes.title,
+        description: recipes.description,
+        servings: recipes.servings,
+        prepTime: recipes.prepTime,
+        cookTime: recipes.cookTime,
+        coverImage: recipes.coverImage,
+        isPublic: recipes.isPublic,
+        createdAt: recipes.createdAt,
+        updatedAt: recipes.updatedAt,
+      })
+      .from(recipeLikes)
+      .innerJoin(recipes, eq(recipeLikes.recipeId, recipes.id))
+      .where(eq(recipeLikes.userId, userId))
+      .orderBy(desc(recipeLikes.createdAt));
+    return result;
+  }
+
+  // Social / Explore
+  async getPublicRecipes(limit: number = 20, offset: number = 0, excludeUserId?: string): Promise<SocialRecipe[]> {
+    const conditions = excludeUserId
+      ? and(eq(recipes.isPublic, true), ne(recipes.userId, excludeUserId))
+      : eq(recipes.isPublic, true);
+
+    const publicRecipes = await db
+      .select()
+      .from(recipes)
+      .where(conditions)
+      .orderBy(desc(recipes.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const socialRecipes: SocialRecipe[] = [];
+    for (const recipe of publicRecipes) {
+      const [recipeIngredients, steps, images, author, likeCount] = await Promise.all([
+        this.getIngredientsByRecipe(recipe.id),
+        this.getStepsByRecipe(recipe.id),
+        this.getImagesByRecipe(recipe.id),
+        this.getUserById(recipe.userId),
+        this.getLikeCount(recipe.id),
+      ]);
+
+      socialRecipes.push({
+        ...recipe,
+        ingredients: recipeIngredients,
+        steps,
+        images,
+        author: {
+          id: author?.id || recipe.userId,
+          username: author?.username || null,
+          firstName: author?.firstName || null,
+          lastName: author?.lastName || null,
+          profileImageUrl: author?.profileImageUrl || null,
+        },
+        likeCount,
+      });
+    }
+
+    return socialRecipes;
+  }
+
+  async getPublicRecipesByUser(userId: string): Promise<Recipe[]> {
+    return db
+      .select()
+      .from(recipes)
+      .where(and(eq(recipes.userId, userId), eq(recipes.isPublic, true)))
+      .orderBy(desc(recipes.createdAt));
+  }
+
+  async getRecipesFromFollowing(userId: string, limit: number = 20, offset: number = 0): Promise<SocialRecipe[]> {
+    const following = await this.getFollowing(userId);
+    const followingIds = following.map(u => u.id);
+
+    if (followingIds.length === 0) {
+      return [];
+    }
+
+    const followingRecipes = await db
+      .select()
+      .from(recipes)
+      .where(and(
+        eq(recipes.isPublic, true),
+        sql`${recipes.userId} = ANY(${followingIds})`
+      ))
+      .orderBy(desc(recipes.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const socialRecipes: SocialRecipe[] = [];
+    for (const recipe of followingRecipes) {
+      const [recipeIngredients, steps, images, author, likeCount] = await Promise.all([
+        this.getIngredientsByRecipe(recipe.id),
+        this.getStepsByRecipe(recipe.id),
+        this.getImagesByRecipe(recipe.id),
+        this.getUserById(recipe.userId),
+        this.getLikeCount(recipe.id),
+      ]);
+
+      socialRecipes.push({
+        ...recipe,
+        ingredients: recipeIngredients,
+        steps,
+        images,
+        author: {
+          id: author?.id || recipe.userId,
+          username: author?.username || null,
+          firstName: author?.firstName || null,
+          lastName: author?.lastName || null,
+          profileImageUrl: author?.profileImageUrl || null,
+        },
+        likeCount,
+      });
+    }
+
+    return socialRecipes;
+  }
+
+  async getUserById(userId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
   }
 }
 
