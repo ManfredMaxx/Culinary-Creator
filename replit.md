@@ -16,10 +16,12 @@ The application features:
 - Social features:
   - Public/private recipe visibility controls
   - Explore page showing public recipes from all users
-  - Follow other users (chefs)
+  - Follow other users (chefs) from recipe detail pages or user profiles
   - Chefs feed showing recipes from followed users
   - Like/unlike recipes
-  - Public user profiles
+  - Public user profiles with follow button
+  - Clickable chef names on recipe cards and detail pages (links to chef profiles)
+  - Editable profile name (display name) separate from username
 
 ## User Preferences
 
