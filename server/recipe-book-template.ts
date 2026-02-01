@@ -30,7 +30,7 @@ function formatTime(minutes: number | null | undefined): string {
   return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
 }
 
-function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number, includeStepImages: boolean = true): string {
+function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number, includeStepImages: boolean = true, isLast: boolean = false): string {
   const coverImage = recipe.coverImage || recipe.images?.[0]?.imageUrl;
   
   const ingredientsList = recipe.ingredients
@@ -71,7 +71,7 @@ function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number, inclu
   if (recipe.servings) timeInfo.push(`<span class="time-item"><strong>Serves:</strong> ${recipe.servings}</span>`);
 
   return `
-    <div class="recipe-page">
+    <div class="recipe-page${isLast ? ' recipe-page-last' : ''}">
       <div class="recipe-header">
         ${coverImage ? `<div class="recipe-hero"><img src="${coverImage}" alt="${escapeHtml(recipe.title)}" /></div>` : ""}
         <div class="recipe-title-block">
@@ -126,12 +126,10 @@ function generateTableOfContents(recipes: RecipeWithDetails[]): string {
 
   return `
     <div class="toc-page">
-      <div class="toc-content-wrapper">
-        <h2 class="toc-heading">Table of Contents</h2>
-        <ul class="toc-list">
-          ${entries}
-        </ul>
-      </div>
+      <h2 class="toc-heading">Table of Contents</h2>
+      <ul class="toc-list">
+        ${entries}
+      </ul>
       <div class="page-footer">
         <span class="page-number">2</span>
       </div>
@@ -159,7 +157,10 @@ export function generateRecipeBookHtml(data: BookData): string {
   const coverPage = generateCoverPage(data.title, data.recipes.length);
   const tocPage = generateTableOfContents(data.recipes);
   const recipePages = data.recipes
-    .map((recipe, index) => generateRecipePage(recipe, index + 3, includeStepImages))
+    .map((recipe, index) => {
+      const isLast = index === data.recipes.length - 1;
+      return generateRecipePage(recipe, index + 3, includeStepImages, isLast);
+    })
     .join("\n");
 
   return `<!DOCTYPE html>
@@ -279,23 +280,11 @@ export function generateRecipeBookHtml(data: BookData): string {
 
     /* Table of Contents */
     .toc-page {
-      height: 100vh;
+      min-height: 100vh;
       padding: 4rem 3rem;
       background: var(--color-cream);
       page-break-after: always;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
       position: relative;
-    }
-
-    .toc-content-wrapper {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
     }
 
     .toc-heading {
@@ -311,8 +300,6 @@ export function generateRecipeBookHtml(data: BookData): string {
       list-style: none;
       max-width: 500px;
       margin: 0 auto;
-      page-break-inside: avoid;
-      break-inside: avoid;
     }
 
     .toc-entry {
@@ -320,14 +307,6 @@ export function generateRecipeBookHtml(data: BookData): string {
       align-items: baseline;
       padding: 0.8rem 0;
       border-bottom: 1px solid rgba(217, 164, 65, 0.2);
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .toc-page .page-footer {
-      position: static;
-      margin-top: auto;
-      padding-bottom: 1rem;
     }
 
     .toc-title {
@@ -355,6 +334,10 @@ export function generateRecipeBookHtml(data: BookData): string {
       background: var(--color-cream);
       page-break-after: always;
       position: relative;
+    }
+
+    .recipe-page-last {
+      page-break-after: auto;
     }
 
     .recipe-header {
@@ -468,6 +451,8 @@ export function generateRecipeBookHtml(data: BookData): string {
       position: relative;
       padding-left: 2.5rem;
       margin-bottom: 1.2rem;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .instructions-list li::before {
