@@ -9,6 +9,9 @@ import {
   Edit,
   ChefHat,
   Loader2,
+  Heart,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { FullRecipe } from "@shared/schema";
 
@@ -34,6 +38,7 @@ export default function RecipeView() {
   const [match, params] = useRoute("/recipe/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const recipeId = params?.id;
@@ -42,6 +47,58 @@ export default function RecipeView() {
     queryKey: ["/api/recipes", recipeId],
     enabled: !!recipeId,
   });
+
+  const { data: likeStatus } = useQuery<{ isLiked: boolean; likeCount: number }>({
+    queryKey: [`/api/recipes/${recipeId}/like-status`],
+    enabled: !!recipeId && !!user,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/recipes/${recipeId}/like`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/recipes/${recipeId}/like-status`] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to like recipe. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/recipes/${recipeId}/like`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/recipes/${recipeId}/like-status`] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to unlike recipe. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleLikeToggle = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to like recipes.",
+      });
+      return;
+    }
+    if (likeStatus?.isLiked) {
+      unlikeMutation.mutate();
+    } else {
+      likeMutation.mutate();
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -141,43 +198,63 @@ export default function RecipeView() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" asChild data-testid="button-edit">
-              <Link href={`/recipe/${recipeId}/edit`}>
-                <Edit className="w-4 h-4" />
-              </Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={likeStatus?.isLiked ? "default" : "outline"}
+              size="sm"
+              onClick={handleLikeToggle}
+              disabled={likeMutation.isPending || unlikeMutation.isPending}
+              className={likeStatus?.isLiked ? "bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/30" : ""}
+              data-testid="button-like"
+            >
+              <Heart className={`w-4 h-4 mr-2 ${likeStatus?.isLiked ? "fill-current" : ""}`} />
+              {likeStatus?.likeCount ?? 0}
             </Button>
-            <Button variant="outline" size="icon" onClick={handlePrint} data-testid="button-print">
-              <Printer className="w-4 h-4" />
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="icon" data-testid="button-delete">
-                  <Trash2 className="w-4 h-4" />
+            {user && user.id === recipe.userId && (
+              <>
+                <Button variant="outline" size="icon" asChild data-testid="button-edit">
+                  <Link href={`/recipe/${recipeId}/edit`}>
+                    <Edit className="w-4 h-4" />
+                  </Link>
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete "{recipe.title}"? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteMutation.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {deleteMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      "Delete"
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                <Button variant="outline" size="icon" onClick={handlePrint} data-testid="button-print">
+                  <Printer className="w-4 h-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="icon" data-testid="button-delete">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Recipe</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{recipe.title}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate()}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Delete"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
+            {user && user.id !== recipe.userId && (
+              <Button variant="outline" size="icon" onClick={handlePrint} data-testid="button-print">
+                <Printer className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -192,6 +269,24 @@ export default function RecipeView() {
         )}
 
         <div className="flex flex-wrap gap-4 mb-8">
+          {user && user.id === recipe.userId && (
+            <Badge 
+              variant={recipe.isPublic ? "default" : "secondary"} 
+              className={`text-base px-4 py-2 gap-2 ${recipe.isPublic ? "bg-primary/10 text-primary" : ""}`}
+            >
+              {recipe.isPublic ? (
+                <>
+                  <Globe className="w-4 h-4" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  Private
+                </>
+              )}
+            </Badge>
+          )}
           {totalTime > 0 && (
             <Badge variant="secondary" className="text-base px-4 py-2 gap-2">
               <Clock className="w-4 h-4" />
