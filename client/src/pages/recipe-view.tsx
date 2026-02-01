@@ -50,7 +50,7 @@ export default function RecipeView() {
 
   const { data: likeStatus } = useQuery<{ isLiked: boolean; likeCount: number }>({
     queryKey: [`/api/recipes/${recipeId}/like-status`],
-    enabled: !!recipeId && !!user,
+    enabled: !!recipeId,
   });
 
   const likeMutation = useMutation({
@@ -200,14 +200,13 @@ export default function RecipeView() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant={likeStatus?.isLiked ? "default" : "outline"}
+              variant="outline"
               size="sm"
               onClick={handleLikeToggle}
               disabled={likeMutation.isPending || unlikeMutation.isPending}
-              className={likeStatus?.isLiked ? "bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/30" : ""}
               data-testid="button-like"
             >
-              <Heart className={`w-4 h-4 mr-2 ${likeStatus?.isLiked ? "fill-current" : ""}`} />
+              <Heart className={`w-4 h-4 mr-2 ${likeStatus?.isLiked ? "fill-primary text-primary" : ""}`} />
               {likeStatus?.likeCount ?? 0}
             </Button>
             {user && user.id === recipe.userId && (

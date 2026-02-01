@@ -44,7 +44,7 @@ export default function ChefsPage() {
   const limit = 12;
 
   const { data: recipes, isLoading } = useQuery<SocialRecipe[]>({
-    queryKey: [`/api/chefs-feed?limit=${limit}&offset=${page * limit}`],
+    queryKey: [`/api/chefs?limit=${limit}&offset=${page * limit}`],
     enabled: !!user,
   });
 
@@ -54,7 +54,7 @@ export default function ChefsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (query) => 
-        (query.queryKey[0]?.toString().startsWith('/api/chefs-feed')) ?? false
+        (query.queryKey[0]?.toString().startsWith('/api/chefs')) ?? false
       });
     },
     onError: () => {
@@ -72,7 +72,7 @@ export default function ChefsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (query) => 
-        (query.queryKey[0]?.toString().startsWith('/api/chefs-feed')) ?? false
+        (query.queryKey[0]?.toString().startsWith('/api/chefs')) ?? false
       });
     },
     onError: () => {

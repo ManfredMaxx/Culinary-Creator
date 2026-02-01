@@ -4,7 +4,7 @@ import express from "express";
 import OpenAI from "openai";
 import puppeteer from "puppeteer-core";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
+import { setupAuth, isAuthenticated, optionalAuth, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
 import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
 import { z } from "zod";
@@ -40,18 +40,25 @@ export async function registerRoutes(
   });
 
   // Get single recipe with details
-  app.get("/api/recipes/:id", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/recipes/:id", optionalAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = req.user ? (req.user as any).claims.sub : null;
 
       const recipe = await storage.getRecipeWithDetails(id);
       if (!recipe) {
         return res.status(404).json({ error: "Recipe not found" });
       }
 
-      // Allow access to user's own recipes and seed demo recipes
-      if (recipe.userId !== userId && recipe.userId !== "seed-demo-user") {
+      // Allow access to:
+      // - User's own recipes
+      // - Seed demo recipes (for showcase)
+      // - Public recipes (for social features)
+      const isOwner = recipe.userId === userId;
+      const isSeedRecipe = recipe.userId === "seed-demo-user";
+      const isPublicRecipe = recipe.isPublic === true;
+
+      if (!isOwner && !isSeedRecipe && !isPublicRecipe) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -862,15 +869,14 @@ Return ONLY valid JSON, no additional text.`,
   });
 
   // Check if current user has liked a recipe
-  app.get("/api/recipes/:id/like-status", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/recipes/:id/like-status", optionalAuth, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = req.user ? (req.user as any).claims.sub : null;
       const recipeId = parseInt(req.params.id);
 
-      const [isLiked, likeCount] = await Promise.all([
-        storage.isRecipeLiked(userId, recipeId),
-        storage.getLikeCount(recipeId),
-      ]);
+      const likeCount = await storage.getLikeCount(recipeId);
+      const isLiked = userId ? await storage.isRecipeLiked(userId, recipeId) : false;
+      
       res.json({ isLiked, likeCount });
     } catch (error) {
       console.error("Error checking like status:", error);
@@ -891,7 +897,7 @@ Return ONLY valid JSON, no additional text.`,
   });
 
   // Explore page - get public recipes from all users
-  app.get("/api/explore", async (req: Request, res: Response) => {
+  app.get("/api/explore", optionalAuth, async (req: Request, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
@@ -911,7 +917,7 @@ Return ONLY valid JSON, no additional text.`,
   });
 
   // Chefs page - get recipes from followed users
-  app.get("/api/chefs-feed", isAuthenticated, async (req: Request, res: Response) => {
+  app.get("/api/chefs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = (req.user as any).claims.sub;
       const limit = parseInt(req.query.limit as string) || 20;

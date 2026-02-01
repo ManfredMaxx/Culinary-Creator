@@ -39,6 +39,20 @@ function AuthenticatedRoutes() {
   );
 }
 
+function PublicRoutes() {
+  return (
+    <>
+      <AppHeader />
+      <Switch>
+        <Route path="/explore" component={Explore} />
+        <Route path="/recipe/:id" component={RecipeView} />
+        <Route path="/user/:userId" component={UserProfile} />
+        <Route component={Landing} />
+      </Switch>
+    </>
+  );
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -53,11 +67,11 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Landing />;
+  if (isAuthenticated) {
+    return <AuthenticatedRoutes />;
   }
 
-  return <AuthenticatedRoutes />;
+  return <PublicRoutes />;
 }
 
 function App() {

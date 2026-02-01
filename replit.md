@@ -13,6 +13,13 @@ The application features:
 - User authentication via Replit Auth
 - User profile management with editable personal information
 - Account deletion with cascade cleanup of all user data
+- Social features:
+  - Public/private recipe visibility controls
+  - Explore page showing public recipes from all users
+  - Follow other users (chefs)
+  - Chefs feed showing recipes from followed users
+  - Like/unlike recipes
+  - Public user profiles
 
 ## User Preferences
 
@@ -59,11 +66,13 @@ The server uses a modular integration pattern with dedicated folders under `serv
 - **Key Tables**:
   - `users` - User accounts from Replit Auth
   - `sessions` - Session management
-  - `recipes` - Recipe metadata (title, description, times, servings)
+  - `recipes` - Recipe metadata (title, description, times, servings, isPublic)
   - `ingredients` - Recipe ingredients with quantities and units
   - `recipe_steps` - Cooking instructions with optional images
   - `recipe_images` - Additional cooking stage photos
   - `conversations` / `messages` - Chat history for AI interactions
+  - `follows` - User follow relationships (followerId + followingId composite key)
+  - `recipe_likes` - Recipe likes (userId + recipeId composite key)
 
 ### Authentication Flow
 The app uses Replit Auth with OIDC. Users authenticate through Replit's identity provider, and sessions are stored in PostgreSQL. The `isAuthenticated` middleware protects API routes, and user data is synced to the local database on login.
