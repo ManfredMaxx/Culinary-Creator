@@ -2,10 +2,11 @@ import type { Express } from "express";
 import { authStorage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 import { z } from "zod";
+import { storage } from "../../storage";
 
 const updateProfileSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  firstName: z.string().transform(s => s?.trim()).optional(),
+  lastName: z.string().transform(s => s?.trim()).optional(),
 });
 
 // Register auth-specific routes
@@ -43,11 +44,18 @@ export function registerAuthRoutes(app: Express): void {
     }
   });
 
-  // Delete user account
+  // Delete user account and all associated data
   app.delete("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
+      // Delete all user's recipes (cascades to ingredients, steps, images via DB constraints)
+      const userRecipes = await storage.getRecipesByUser(userId);
+      for (const recipe of userRecipes) {
+        await storage.deleteRecipe(recipe.id);
+      }
+      
+      // Delete the user account
       await authStorage.deleteUser(userId);
       
       // Clear the session
