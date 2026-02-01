@@ -677,6 +677,276 @@ Return ONLY valid JSON, no additional text.`,
     }
   });
 
+  // ==================== SOCIAL FEATURES ====================
+
+  // Get public user profile
+  app.get("/api/users/:userId/profile", async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId as string;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const [followerCount, followingCount, publicRecipes] = await Promise.all([
+        storage.getFollowerCount(userId),
+        storage.getFollowingCount(userId),
+        storage.getPublicRecipesByUser(userId),
+      ]);
+
+      res.json({
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        followerCount,
+        followingCount,
+        recipeCount: publicRecipes.length,
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ error: "Failed to fetch user profile" });
+    }
+  });
+
+  // Get public recipes by a specific user
+  app.get("/api/users/:userId/recipes", async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId as string;
+      const publicRecipes = await storage.getPublicRecipesByUser(userId);
+      res.json(publicRecipes);
+    } catch (error) {
+      console.error("Error fetching user recipes:", error);
+      res.status(500).json({ error: "Failed to fetch user recipes" });
+    }
+  });
+
+  // Follow a user
+  app.post("/api/users/:userId/follow", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const followerId = (req.user as any).claims.sub;
+      const followingId = req.params.userId as string;
+
+      if (followerId === followingId) {
+        return res.status(400).json({ error: "Cannot follow yourself" });
+      }
+
+      const targetUser = await storage.getUserById(followingId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const alreadyFollowing = await storage.isFollowing(followerId, followingId);
+      if (alreadyFollowing) {
+        return res.status(400).json({ error: "Already following this user" });
+      }
+
+      await storage.followUser(followerId, followingId);
+      res.json({ success: true, message: "User followed successfully" });
+    } catch (error) {
+      console.error("Error following user:", error);
+      res.status(500).json({ error: "Failed to follow user" });
+    }
+  });
+
+  // Unfollow a user
+  app.delete("/api/users/:userId/follow", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const followerId = (req.user as any).claims.sub;
+      const followingId = req.params.userId as string;
+
+      await storage.unfollowUser(followerId, followingId);
+      res.json({ success: true, message: "User unfollowed successfully" });
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      res.status(500).json({ error: "Failed to unfollow user" });
+    }
+  });
+
+  // Check if current user is following a specific user
+  app.get("/api/users/:userId/following-status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const followerId = (req.user as any).claims.sub;
+      const followingId = req.params.userId as string;
+
+      const isFollowing = await storage.isFollowing(followerId, followingId);
+      res.json({ isFollowing });
+    } catch (error) {
+      console.error("Error checking following status:", error);
+      res.status(500).json({ error: "Failed to check following status" });
+    }
+  });
+
+  // Get followers of a user
+  app.get("/api/users/:userId/followers", async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId as string;
+      const followers = await storage.getFollowers(userId);
+      res.json(followers.map(u => ({
+        id: u.id,
+        username: u.username,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        profileImageUrl: u.profileImageUrl,
+      })));
+    } catch (error) {
+      console.error("Error fetching followers:", error);
+      res.status(500).json({ error: "Failed to fetch followers" });
+    }
+  });
+
+  // Get users that a user is following
+  app.get("/api/users/:userId/following", async (req: Request, res: Response) => {
+    try {
+      const userId = req.params.userId as string;
+      const following = await storage.getFollowing(userId);
+      res.json(following.map(u => ({
+        id: u.id,
+        username: u.username,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        profileImageUrl: u.profileImageUrl,
+      })));
+    } catch (error) {
+      console.error("Error fetching following:", error);
+      res.status(500).json({ error: "Failed to fetch following" });
+    }
+  });
+
+  // Like a recipe
+  app.post("/api/recipes/:id/like", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const recipeId = parseInt(req.params.id);
+
+      const recipe = await storage.getRecipe(recipeId);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      const alreadyLiked = await storage.isRecipeLiked(userId, recipeId);
+      if (alreadyLiked) {
+        return res.status(400).json({ error: "Recipe already liked" });
+      }
+
+      await storage.likeRecipe(userId, recipeId);
+      const likeCount = await storage.getLikeCount(recipeId);
+      res.json({ success: true, likeCount });
+    } catch (error) {
+      console.error("Error liking recipe:", error);
+      res.status(500).json({ error: "Failed to like recipe" });
+    }
+  });
+
+  // Unlike a recipe
+  app.delete("/api/recipes/:id/like", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const recipeId = parseInt(req.params.id);
+
+      await storage.unlikeRecipe(userId, recipeId);
+      const likeCount = await storage.getLikeCount(recipeId);
+      res.json({ success: true, likeCount });
+    } catch (error) {
+      console.error("Error unliking recipe:", error);
+      res.status(500).json({ error: "Failed to unlike recipe" });
+    }
+  });
+
+  // Check if current user has liked a recipe
+  app.get("/api/recipes/:id/like-status", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const recipeId = parseInt(req.params.id);
+
+      const [isLiked, likeCount] = await Promise.all([
+        storage.isRecipeLiked(userId, recipeId),
+        storage.getLikeCount(recipeId),
+      ]);
+      res.json({ isLiked, likeCount });
+    } catch (error) {
+      console.error("Error checking like status:", error);
+      res.status(500).json({ error: "Failed to check like status" });
+    }
+  });
+
+  // Get recipes liked by current user
+  app.get("/api/user/liked-recipes", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const likedRecipes = await storage.getLikedRecipesByUser(userId);
+      res.json(likedRecipes);
+    } catch (error) {
+      console.error("Error fetching liked recipes:", error);
+      res.status(500).json({ error: "Failed to fetch liked recipes" });
+    }
+  });
+
+  // Explore page - get public recipes from all users
+  app.get("/api/explore", async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      // If user is authenticated, exclude their own recipes
+      let excludeUserId: string | undefined;
+      if (req.user) {
+        excludeUserId = (req.user as any).claims?.sub;
+      }
+
+      const recipes = await storage.getPublicRecipes(limit, offset, excludeUserId);
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching explore recipes:", error);
+      res.status(500).json({ error: "Failed to fetch explore recipes" });
+    }
+  });
+
+  // Chefs page - get recipes from followed users
+  app.get("/api/chefs-feed", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.user as any).claims.sub;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const recipes = await storage.getRecipesFromFollowing(userId, limit, offset);
+      res.json(recipes);
+    } catch (error) {
+      console.error("Error fetching chefs feed:", error);
+      res.status(500).json({ error: "Failed to fetch chefs feed" });
+    }
+  });
+
+  // Update recipe visibility (public/private)
+  app.patch("/api/recipes/:id/visibility", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = (req.user as any).claims.sub;
+      const { isPublic } = req.body;
+
+      if (typeof isPublic !== "boolean") {
+        return res.status(400).json({ error: "isPublic must be a boolean" });
+      }
+
+      const recipe = await storage.getRecipe(id);
+      if (!recipe) {
+        return res.status(404).json({ error: "Recipe not found" });
+      }
+
+      if (recipe.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const updated = await storage.updateRecipe(id, { isPublic });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating recipe visibility:", error);
+      res.status(500).json({ error: "Failed to update recipe visibility" });
+    }
+  });
+
   return httpServer;
 }
 
