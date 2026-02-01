@@ -4,7 +4,7 @@ import express from "express";
 import OpenAI from "openai";
 import puppeteer from "puppeteer-core";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, isAuthenticated, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
 import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
 import { z } from "zod";
@@ -605,6 +605,12 @@ Return ONLY valid JSON, no additional text.`,
     return { ...bookData, includeStepImages };
   }
 
+  async function addUserColorTheme(bookData: any, userId: string) {
+    const user = await authStorage.getUser(userId);
+    const colorTheme = user?.colorTheme || "michelin-star";
+    return { ...bookData, colorTheme };
+  }
+
   // Generate recipe book HTML
   app.post("/api/recipes/book/html", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -616,7 +622,8 @@ Return ONLY valid JSON, no additional text.`,
       const userId = (req.user as any).claims.sub;
 
       const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
-      const bookData = addIncludeStepImages(baseBookData, includeStepImages !== false);
+      const withStepImages = addIncludeStepImages(baseBookData, includeStepImages !== false);
+      const bookData = await addUserColorTheme(withStepImages, userId);
       const html = generateBookTemplate(bookData);
       
       res.setHeader("Content-Type", "text/html");
@@ -639,7 +646,8 @@ Return ONLY valid JSON, no additional text.`,
       const userId = (req.user as any).claims.sub;
 
       const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
-      const bookData = addIncludeStepImages(baseBookData, includeStepImages !== false);
+      const withStepImages = addIncludeStepImages(baseBookData, includeStepImages !== false);
+      const bookData = await addUserColorTheme(withStepImages, userId);
       const html = generateBookTemplate(bookData);
 
       // Launch puppeteer to generate PDF

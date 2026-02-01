@@ -25,12 +25,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { User, Pencil, Save, Trash2 } from "lucide-react";
+import { User, Pencil, Save, Trash2, Palette } from "lucide-react";
+import { useTheme, colorThemeNames } from "@/components/theme-provider";
+
+type ColorTheme = "michelin-star" | "forest-bistro" | "vaporwave" | "high-end-bar";
 
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { colorTheme, setColorTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -181,16 +185,28 @@ export default function Profile() {
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-muted-foreground">Theme</Label>
-              <Select disabled>
+              <Label className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Color Theme
+              </Label>
+              <Select 
+                value={colorTheme} 
+                onValueChange={(value) => setColorTheme(value as ColorTheme)}
+              >
                 <SelectTrigger data-testid="select-theme">
-                  <SelectValue placeholder="Coming soon..." />
+                  <SelectValue placeholder="Select a theme" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="placeholder">Coming soon...</SelectItem>
+                  {Object.entries(colorThemeNames).map(([value, label]) => (
+                    <SelectItem key={value} value={value} data-testid={`theme-option-${value}`}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Theme selection coming soon</p>
+              <p className="text-xs text-muted-foreground">
+                Changes apply immediately to the app and exported recipe books
+              </p>
             </div>
           </div>
 

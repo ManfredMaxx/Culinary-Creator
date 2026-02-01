@@ -1,4 +1,5 @@
 import type { Recipe, Ingredient, RecipeStep, RecipeImage } from "@shared/schema";
+import type { ColorTheme } from "@shared/models/auth";
 
 interface RecipeWithDetails extends Recipe {
   ingredients: Ingredient[];
@@ -10,7 +11,67 @@ interface BookData {
   title: string;
   recipes: RecipeWithDetails[];
   includeStepImages?: boolean;
+  colorTheme?: ColorTheme;
 }
+
+interface ThemeColors {
+  primary: string;
+  primaryLight: string;
+  accent: string;
+  accentDark: string;
+  cream: string;
+  dark: string;
+  darkWarm: string;
+  text: string;
+  textLight: string;
+}
+
+const themeColorMap: Record<ColorTheme, ThemeColors> = {
+  "michelin-star": {
+    primary: "#d9a441",
+    primaryLight: "#e8c078",
+    accent: "#8B4557",
+    accentDark: "#6a3444",
+    cream: "#faf8f5",
+    dark: "#1a1715",
+    darkWarm: "#2a2420",
+    text: "#3d3833",
+    textLight: "#6b635a",
+  },
+  "forest-bistro": {
+    primary: "#c9a227",
+    primaryLight: "#dfc060",
+    accent: "#2d5a3d",
+    accentDark: "#1e3d29",
+    cream: "#f5f7f4",
+    dark: "#0f1a13",
+    darkWarm: "#1a2a1f",
+    text: "#2a3d30",
+    textLight: "#4a6550",
+  },
+  "vaporwave": {
+    primary: "#e040a0",
+    primaryLight: "#f080c0",
+    accent: "#40d0d0",
+    accentDark: "#20a0a0",
+    cream: "#f8f0fc",
+    dark: "#1a0f20",
+    darkWarm: "#2a1830",
+    text: "#3d2048",
+    textLight: "#6b4080",
+  },
+  "high-end-bar": {
+    primary: "#e02020",
+    primaryLight: "#f04040",
+    accent: "#c01818",
+    accentDark: "#a01010",
+    cream: "#fafafa",
+    dark: "#080808",
+    darkWarm: "#121212",
+    text: "#1a1a1a",
+    textLight: "#4a4a4a",
+  },
+};
 
 function escapeHtml(text: string | null | undefined): string {
   if (!text) return "";
@@ -146,6 +207,8 @@ function generateCoverPage(title: string, recipeCount: number): string {
 
 export function generateRecipeBookHtml(data: BookData): string {
   const includeStepImages = data.includeStepImages !== false;
+  const colorTheme = data.colorTheme || "michelin-star";
+  const colors = themeColorMap[colorTheme];
   const coverPage = generateCoverPage(data.title, data.recipes.length);
   const tocPage = generateTableOfContents(data.recipes);
   const recipePages = data.recipes
@@ -166,15 +229,15 @@ export function generateRecipeBookHtml(data: BookData): string {
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --color-gold: #d9a441;
-      --color-gold-light: #e8c078;
-      --color-burgundy: #8B4557;
-      --color-burgundy-dark: #6a3444;
-      --color-cream: #faf8f5;
-      --color-dark: #1a1715;
-      --color-dark-warm: #2a2420;
-      --color-text: #3d3833;
-      --color-text-light: #6b635a;
+      --color-gold: ${colors.primary};
+      --color-gold-light: ${colors.primaryLight};
+      --color-burgundy: ${colors.accent};
+      --color-burgundy-dark: ${colors.accentDark};
+      --color-cream: ${colors.cream};
+      --color-dark: ${colors.dark};
+      --color-dark-warm: ${colors.darkWarm};
+      --color-text: ${colors.text};
+      --color-text-light: ${colors.textLight};
     }
 
     * {
