@@ -12,12 +12,15 @@ import {
   Heart,
   Globe,
   Lock,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +37,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import type { FullRecipe } from "@shared/schema";
 
+interface RecipeWithAuthor extends FullRecipe {
+  author: {
+    id: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    profileName: string | null;
+    profileImageUrl: string | null;
+  } | null;
+}
+
 export default function RecipeView() {
   const [match, params] = useRoute("/recipe/:id");
   const [, setLocation] = useLocation();
@@ -43,7 +57,7 @@ export default function RecipeView() {
 
   const recipeId = params?.id;
 
-  const { data: recipe, isLoading } = useQuery<FullRecipe>({
+  const { data: recipe, isLoading } = useQuery<RecipeWithAuthor>({
     queryKey: ["/api/recipes", recipeId],
     enabled: !!recipeId,
   });
@@ -51,6 +65,12 @@ export default function RecipeView() {
   const { data: likeStatus } = useQuery<{ isLiked: boolean; likeCount: number }>({
     queryKey: [`/api/recipes/${recipeId}/like-status`],
     enabled: !!recipeId,
+  });
+
+  const authorId = recipe?.author?.id;
+  const { data: followStatus } = useQuery<{ isFollowing: boolean }>({
+    queryKey: [`/api/users/${authorId}/following-status`],
+    enabled: !!authorId && !!user && user.id !== authorId,
   });
 
   const likeMutation = useMutation({
@@ -98,6 +118,79 @@ export default function RecipeView() {
     } else {
       likeMutation.mutate();
     }
+  };
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/users/${authorId}/follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${authorId}/following-status`] });
+      toast({
+        title: "Following",
+        description: `You are now following ${getDisplayName()}.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to follow user. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/users/${authorId}/follow`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${authorId}/following-status`] });
+      toast({
+        title: "Unfollowed",
+        description: `You have unfollowed ${getDisplayName()}.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to unfollow user. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFollowToggle = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to follow chefs.",
+      });
+      return;
+    }
+    if (followStatus?.isFollowing) {
+      unfollowMutation.mutate();
+    } else {
+      followMutation.mutate();
+    }
+  };
+
+  const getDisplayName = () => {
+    if (!recipe?.author) return "Chef";
+    if (recipe.author.profileName) return recipe.author.profileName;
+    if (recipe.author.firstName) return recipe.author.firstName;
+    return recipe.author.username || "Chef";
+  };
+
+  const getInitials = () => {
+    if (!recipe?.author) return "CH";
+    if (recipe.author.firstName && recipe.author.lastName) {
+      return `${recipe.author.firstName[0]}${recipe.author.lastName[0]}`.toUpperCase();
+    }
+    if (recipe.author.username) {
+      return recipe.author.username.slice(0, 2).toUpperCase();
+    }
+    return "CH";
   };
 
   const deleteMutation = useMutation({
@@ -196,6 +289,21 @@ export default function RecipeView() {
               {recipe.description && (
                 <p className="text-muted-foreground mt-1">{recipe.description}</p>
               )}
+              {recipe.author && (
+                <Link href={`/user/${recipe.author.id}`}>
+                  <div className="flex items-center gap-2 mt-2 hover:opacity-80" data-testid="link-author">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={recipe.author.profileImageUrl || undefined} alt={getDisplayName()} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground">
+                      by <span className="text-foreground font-medium">{getDisplayName()}</span>
+                    </span>
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -209,6 +317,27 @@ export default function RecipeView() {
               <Heart className={`w-4 h-4 mr-2 ${likeStatus?.isLiked ? "fill-primary text-primary" : ""}`} />
               {likeStatus?.likeCount ?? 0}
             </Button>
+            {recipe.author && user?.id !== recipe.author.id && (
+              <Button
+                variant={followStatus?.isFollowing ? "secondary" : "outline"}
+                size="sm"
+                onClick={handleFollowToggle}
+                disabled={followMutation.isPending || unfollowMutation.isPending}
+                data-testid="button-follow"
+              >
+                {followStatus?.isFollowing ? (
+                  <>
+                    <UserMinus className="w-4 h-4 mr-2" />
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Follow
+                  </>
+                )}
+              </Button>
+            )}
             {user && user.id === recipe.userId && (
               <>
                 <Button variant="outline" size="icon" asChild data-testid="button-edit">

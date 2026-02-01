@@ -62,7 +62,18 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Access denied" });
       }
 
-      res.json(recipe);
+      // Include author info for social features
+      const author = await storage.getUserById(recipe.userId);
+      const authorInfo = author ? {
+        id: author.id,
+        username: author.username,
+        firstName: author.firstName,
+        lastName: author.lastName,
+        profileName: author.profileName,
+        profileImageUrl: author.profileImageUrl,
+      } : null;
+
+      res.json({ ...recipe, author: authorInfo });
     } catch (error) {
       console.error("Error fetching recipe:", error);
       res.status(500).json({ error: "Failed to fetch recipe" });
