@@ -13,6 +13,9 @@ import RecipeView from "@/pages/recipe-view";
 import EditRecipe from "@/pages/edit-recipe";
 import RecipeBook from "@/pages/recipe-book";
 import Profile from "@/pages/profile";
+import Explore from "@/pages/explore";
+import Chefs from "@/pages/chefs";
+import UserProfile from "@/pages/user-profile";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -27,6 +30,9 @@ function AuthenticatedRoutes() {
         <Route path="/recipe/:id/edit" component={EditRecipe} />
         <Route path="/book" component={RecipeBook} />
         <Route path="/profile" component={Profile} />
+        <Route path="/explore" component={Explore} />
+        <Route path="/chefs" component={Chefs} />
+        <Route path="/user/:userId" component={UserProfile} />
         <Route component={NotFound} />
       </Switch>
     </>
