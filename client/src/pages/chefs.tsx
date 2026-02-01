@@ -30,6 +30,7 @@ interface SocialRecipe {
     username: string | null;
     firstName: string | null;
     lastName: string | null;
+    profileName: string | null;
     profileImageUrl: string | null;
   };
   likeCount: number;
@@ -85,8 +86,11 @@ export default function ChefsPage() {
   });
 
   const getDisplayName = (author: SocialRecipe["author"]) => {
-    if (author.firstName && author.lastName) {
-      return `${author.firstName} ${author.lastName}`;
+    if (author.profileName) {
+      return author.profileName;
+    }
+    if (author.firstName) {
+      return author.firstName;
     }
     return author.username || "Chef";
   };
