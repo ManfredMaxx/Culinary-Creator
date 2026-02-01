@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -32,8 +32,15 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const [firstName, setFirstName] = useState(user?.firstName || "");
-  const [lastName, setLastName] = useState(user?.lastName || "");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.firstName || "");
+      setLastName(user.lastName || "");
+    }
+  }, [user]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { firstName?: string; lastName?: string }) => {
@@ -75,9 +82,11 @@ export default function Profile() {
   });
 
   const handleSave = () => {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
     updateProfileMutation.mutate({
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
+      firstName: trimmedFirstName || undefined,
+      lastName: trimmedLastName || undefined,
     });
   };
 
@@ -236,7 +245,7 @@ export default function Profile() {
                 <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteAccountMutation.mutate()}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  className="bg-destructive text-destructive-foreground"
                   disabled={deleteAccountMutation.isPending}
                   data-testid="button-confirm-delete"
                 >
