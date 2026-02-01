@@ -36,18 +36,20 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const { colorTheme, setColorTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
+  const [profileName, setProfileName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
   useEffect(() => {
     if (user) {
+      setProfileName(user.profileName || user.firstName || "");
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
     }
   }, [user]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { firstName?: string; lastName?: string }) => {
+    mutationFn: async (data: { profileName?: string; firstName?: string; lastName?: string }) => {
       const response = await apiRequest("PATCH", "/api/auth/user", data);
       return response.json();
     },
@@ -86,21 +88,25 @@ export default function Profile() {
   });
 
   const handleSave = () => {
+    const trimmedProfileName = profileName.trim();
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     updateProfileMutation.mutate({
+      profileName: trimmedProfileName || undefined,
       firstName: trimmedFirstName || undefined,
       lastName: trimmedLastName || undefined,
     });
   };
 
   const handleEdit = () => {
+    setProfileName(user?.profileName || user?.firstName || "");
     setFirstName(user?.firstName || "");
     setLastName(user?.lastName || "");
     setIsEditing(true);
   };
 
   const handleCancel = () => {
+    setProfileName(user?.profileName || user?.firstName || "");
     setFirstName(user?.firstName || "");
     setLastName(user?.lastName || "");
     setIsEditing(false);
@@ -141,6 +147,26 @@ export default function Profile() {
               <div className="p-3 bg-muted/50 rounded-md text-sm" data-testid="text-email">
                 {user?.email || "Not set"}
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="profileName">Display Name</Label>
+              {isEditing ? (
+                <Input
+                  id="profileName"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Enter display name"
+                  data-testid="input-profile-name"
+                />
+              ) : (
+                <div className="p-3 bg-muted/50 rounded-md text-sm" data-testid="text-profile-name">
+                  {user?.profileName || user?.firstName || "Not set"}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                This is the name shown on your public profile and recipes
+              </p>
             </div>
 
             <div className="grid gap-2">
