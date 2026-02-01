@@ -180,6 +180,7 @@ export type SocialRecipe = FullRecipe & {
     username: string | null;
     firstName: string | null;
     lastName: string | null;
+    profileName: string | null;
     profileImageUrl: string | null;
   };
   likeCount: number;

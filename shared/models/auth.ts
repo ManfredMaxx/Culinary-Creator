@@ -25,6 +25,7 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  profileName: varchar("profile_name"),
   profileImageUrl: varchar("profile_image_url"),
   colorTheme: varchar("color_theme").default("michelin-star"),
   createdAt: timestamp("created_at").defaultNow(),
