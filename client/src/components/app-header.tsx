@@ -1,5 +1,5 @@
-import { Link } from "wouter";
-import { LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -62,6 +62,12 @@ export function AppHeader() {
                 </div>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="cursor-pointer" data-testid="link-profile">
+                  <User className="w-4 h-4 mr-2" />
+                  My Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => logout()}
                 disabled={isLoggingOut}

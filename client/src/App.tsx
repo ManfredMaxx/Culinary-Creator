@@ -12,6 +12,7 @@ import NewRecipe from "@/pages/new-recipe";
 import RecipeView from "@/pages/recipe-view";
 import EditRecipe from "@/pages/edit-recipe";
 import RecipeBook from "@/pages/recipe-book";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -25,6 +26,7 @@ function AuthenticatedRoutes() {
         <Route path="/recipe/:id" component={RecipeView} />
         <Route path="/recipe/:id/edit" component={EditRecipe} />
         <Route path="/book" component={RecipeBook} />
+        <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
     </>
