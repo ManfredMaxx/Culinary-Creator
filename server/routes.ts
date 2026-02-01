@@ -8,6 +8,7 @@ import { setupAuth, isAuthenticated, optionalAuth, registerAuthRoutes, authStora
 import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
 import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
 import { z } from "zod";
+import { transcriptionResponseSchema } from "@shared/schema";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -536,8 +537,23 @@ Return ONLY valid JSON, no additional text.`,
         max_completion_tokens: 4096,
       });
 
-      const recipeData = JSON.parse(response.choices[0]?.message?.content || "{}");
-      res.json(recipeData);
+      const rawContent = response.choices[0]?.message?.content || "{}";
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(rawContent);
+      } catch {
+        return res.status(500).json({ error: "AI returned invalid JSON. Please try again." });
+      }
+
+      const validationResult = transcriptionResponseSchema.safeParse(parsedJson);
+      if (!validationResult.success) {
+        const missingFields = validationResult.error.errors.map(e => e.path.join(".")).join(", ");
+        return res.status(500).json({ 
+          error: `AI response is missing required fields: ${missingFields || "title, ingredients, or steps"}. Please try again with a clearer recipe description.` 
+        });
+      }
+
+      res.json(validationResult.data);
     } catch (error) {
       console.error("Error transcribing recipe:", error);
       res.status(500).json({ error: "Failed to transcribe recipe" });

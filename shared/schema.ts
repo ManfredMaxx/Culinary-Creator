@@ -11,7 +11,7 @@ export * from "./models/chat";
 // Recipes table
 export const recipes = pgTable("recipes", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   servings: integer("servings"),
@@ -186,3 +186,29 @@ export type SocialRecipe = FullRecipe & {
   likeCount: number;
   isLikedByUser?: boolean;
 };
+
+// Schema for validating AI transcription response
+export const transcriptionIngredientSchema = z.object({
+  name: z.string(),
+  quantity: z.string().optional(),
+  unit: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const transcriptionStepSchema = z.object({
+  stepNumber: z.number(),
+  instruction: z.string(),
+  duration: z.number().optional(),
+});
+
+export const transcriptionResponseSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  servings: z.number().optional(),
+  prepTime: z.number().optional(),
+  cookTime: z.number().optional(),
+  ingredients: z.array(transcriptionIngredientSchema),
+  steps: z.array(transcriptionStepSchema),
+});
+
+export type TranscriptionResponse = z.infer<typeof transcriptionResponseSchema>;
