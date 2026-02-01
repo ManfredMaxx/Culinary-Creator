@@ -11,6 +11,8 @@ The application features:
 - Recipe book generation with HTML and PDF export options
 - Beautiful Michelin-star themed cookbook formatting
 - User authentication via Replit Auth
+- User profile management with editable personal information
+- Account deletion with cascade cleanup of all user data
 
 ## User Preferences
 
@@ -24,7 +26,8 @@ The app uses an elegant, Michelin-star French restaurant aesthetic:
 - **Background**: Rich dark tones (near-black with warm undertones)
 - **Typography**: Playfair Display (serif) for headings, Plus Jakarta Sans for body
 - **Effects**: Subtle candlelight flicker animations, atmospheric glows, chrome shimmer on hover
-- **Iconography**: UtensilsCrossed as main logo, lucide-react icons throughout (no emojis)
+- **Iconography**: "bwr" text logo in Times New Roman font, lucide-react icons throughout (no emojis)
+- **Branding**: App name is "BakedWithRowan" with lowercase "bwr" logo
 
 ## System Architecture
 
@@ -36,7 +39,7 @@ The app uses an elegant, Michelin-star French restaurant aesthetic:
 - **Build Tool**: Vite with React plugin
 - **Theme**: Dark-first design with elegant Michelin-star restaurant aesthetic (candlelit, moody, sophisticated)
 
-The frontend follows a pages-based structure with reusable components. Key pages include dashboard, recipe creation (with voice recording), recipe viewing, and recipe book generation.
+The frontend follows a pages-based structure with reusable components. Key pages include dashboard, recipe creation (with voice recording), recipe viewing, recipe book generation, and user profile management.
 
 ### Backend Architecture
 - **Framework**: Express.js with TypeScript
