@@ -97,14 +97,6 @@ function generateRecipePage(recipe: RecipeWithDetails, pageNumber: number, inclu
         </div>
       </div>
 
-      ${additionalImages ? `
-        <div class="photo-gallery">
-          <h3 class="section-heading">Cooking Gallery</h3>
-          <div class="gallery-grid">
-            ${additionalImages}
-          </div>
-        </div>
-      ` : ""}
       
       <div class="page-footer">
         <span class="page-number">${pageNumber}</span>
@@ -119,7 +111,7 @@ function generateTableOfContents(recipes: RecipeWithDetails[]): string {
       <li class="toc-entry">
         <span class="toc-title">${escapeHtml(recipe.title)}</span>
         <span class="toc-dots"></span>
-        <span class="toc-page">${index + 3}</span>
+        <span class="toc-page-num">${index + 3}</span>
       </li>
     `)
     .join("\n");
@@ -494,17 +486,6 @@ export function generateRecipeBookHtml(data: BookData): string {
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
 
-    .photo-gallery {
-      margin-top: 2rem;
-      padding-top: 2rem;
-      border-top: 1px solid rgba(217, 164, 65, 0.3);
-    }
-
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-    }
 
     .gallery-image {
       width: 100%;
