@@ -18,8 +18,8 @@ export function registerAuthRoutes(app: Express): void {
   // Get current authenticated user
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await authStorage.getUser(userId);
+      const replitId = req.user.claims.sub;
+      const user = await authStorage.getUser(replitId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -30,14 +30,14 @@ export function registerAuthRoutes(app: Express): void {
   // Update user profile (first name and last name only)
   app.patch("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const replitId = req.user.claims.sub;
       const parsed = updateProfileSchema.safeParse(req.body);
       
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid request data" });
       }
 
-      const user = await authStorage.updateUser(userId, parsed.data);
+      const user = await authStorage.updateUser(replitId, parsed.data);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -51,16 +51,22 @@ export function registerAuthRoutes(app: Express): void {
   // Delete user account and all associated data
   app.delete("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const replitId = req.user.claims.sub;
       
-      // Delete all user's recipes (cascades to ingredients, steps, images via DB constraints)
-      const userRecipes = await storage.getRecipesByUser(userId);
+      // Get the user to obtain their internal UUID id
+      const user = await authStorage.getUser(replitId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Delete all user's recipes using internal id (cascades to ingredients, steps, images via DB constraints)
+      const userRecipes = await storage.getRecipesByUser(user.id);
       for (const recipe of userRecipes) {
         await storage.deleteRecipe(recipe.id);
       }
       
       // Delete the user account
-      await authStorage.deleteUser(userId);
+      await authStorage.deleteUser(replitId);
       
       // Clear the session
       req.logout?.((err: any) => {

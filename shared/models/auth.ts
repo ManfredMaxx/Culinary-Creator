@@ -21,6 +21,7 @@ export type ColorTheme = typeof colorThemes[number];
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  replitId: varchar("replit_id").unique(),
   username: varchar("username").unique(),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),

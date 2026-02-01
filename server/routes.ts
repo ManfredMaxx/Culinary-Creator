@@ -14,6 +14,22 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Helper to get internal user ID from Replit Auth sub claim
+// The sub claim is stored in replitId, the internal UUID is in id
+async function getUserId(req: Request): Promise<string | null> {
+  const replitId = req.user ? (req.user as any).claims?.sub : null;
+  if (!replitId) return null;
+  const user = await authStorage.getUser(replitId);
+  return user?.id ?? null;
+}
+
+// Helper to get internal user ID, throws if not found (for authenticated routes)
+async function requireUserId(req: Request): Promise<string> {
+  const userId = await getUserId(req);
+  if (!userId) throw new Error("User not found");
+  return userId;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -28,9 +44,11 @@ export async function registerRoutes(
   // Get all recipes for current user (including seed demo recipes)
   app.get("/api/recipes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const userRecipes = await storage.getRecipesByUser(userId);
-      const seedRecipes = await storage.getRecipesByUser("seed-demo-user");
+      // Also get seed demo user's recipes by their internal id
+      const seedUser = await authStorage.getUser("seed-demo-user");
+      const seedRecipes = seedUser ? await storage.getRecipesByUser(seedUser.id) : [];
       const allRecipes = [...userRecipes, ...seedRecipes];
       res.json(allRecipes);
     } catch (error) {
@@ -43,19 +61,23 @@ export async function registerRoutes(
   app.get("/api/recipes/:id", optionalAuth, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = req.user ? (req.user as any).claims.sub : null;
+      const userId = await getUserId(req);
 
       const recipe = await storage.getRecipeWithDetails(id);
       if (!recipe) {
         return res.status(404).json({ error: "Recipe not found" });
       }
 
+      // Get seed demo user's internal id for comparison
+      const seedUser = await authStorage.getUser("seed-demo-user");
+      const seedUserId = seedUser?.id;
+
       // Allow access to:
       // - User's own recipes
       // - Seed demo recipes (for showcase)
       // - Public recipes (for social features)
       const isOwner = recipe.userId === userId;
-      const isSeedRecipe = recipe.userId === "seed-demo-user";
+      const isSeedRecipe = recipe.userId === seedUserId;
       const isPublicRecipe = recipe.isPublic === true;
 
       if (!isOwner && !isSeedRecipe && !isPublicRecipe) {
@@ -123,7 +145,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request body" });
       }
 
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const { title, description, servings, prepTime, cookTime, ingredients, steps, images } = parseResult.data;
 
       // Create the recipe
@@ -213,7 +235,7 @@ export async function registerRoutes(
   app.delete("/api/recipes/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipe(id);
       if (!recipe) {
@@ -258,7 +280,7 @@ export async function registerRoutes(
   app.put("/api/recipes/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipe(id);
       if (!recipe) {
@@ -376,7 +398,7 @@ export async function registerRoutes(
   app.post("/api/recipes/:id/images", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const recipeId = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipe(recipeId);
       if (!recipe) {
@@ -416,7 +438,7 @@ export async function registerRoutes(
     try {
       const recipeId = parseInt(req.params.recipeId);
       const imageId = parseInt(req.params.imageId);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipe(recipeId);
       if (!recipe) {
@@ -446,7 +468,7 @@ export async function registerRoutes(
     try {
       const recipeId = parseInt(req.params.recipeId);
       const imageId = parseInt(req.params.imageId);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipe(recipeId);
       if (!recipe) {
@@ -553,7 +575,7 @@ Return ONLY valid JSON, no additional text.`,
   app.get("/api/recipes/:id/print", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const recipe = await storage.getRecipeWithDetails(id);
       if (!recipe) {
@@ -581,9 +603,13 @@ Return ONLY valid JSON, no additional text.`,
       recipeIds.map((id: number) => storage.getRecipeWithDetails(id))
     );
 
+    // Get seed demo user's internal id
+    const seedUser = await authStorage.getUser("seed-demo-user");
+    const seedUserId = seedUser?.id;
+
     // Filter out null recipes and check ownership (including seed demo recipes)
     const validRecipes = recipes.filter(
-      (recipe) => recipe && (recipe.userId === userId || recipe.userId === "seed-demo-user")
+      (recipe) => recipe && (recipe.userId === userId || recipe.userId === seedUserId)
     );
 
     if (validRecipes.length === 0) {
@@ -630,7 +656,7 @@ Return ONLY valid JSON, no additional text.`,
   }
 
   async function addUserColorTheme(bookData: any, userId: string) {
-    const user = await authStorage.getUser(userId);
+    const user = await authStorage.getUserById(userId);
     const colorTheme = user?.colorTheme || "michelin-star";
     return { ...bookData, colorTheme };
   }
@@ -643,7 +669,7 @@ Return ONLY valid JSON, no additional text.`,
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request" });
       }
       const { title, recipeIds, includeStepImages } = parseResult.data;
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
       const withStepImages = addIncludeStepImages(baseBookData, includeStepImages !== false);
@@ -667,7 +693,7 @@ Return ONLY valid JSON, no additional text.`,
         return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Invalid request" });
       }
       const { title, recipeIds, includeStepImages } = parseResult.data;
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
 
       const baseBookData = await prepareBookData(recipeIds, userId, title || "My Recipe Collection");
       const withStepImages = addIncludeStepImages(baseBookData, includeStepImages !== false);
@@ -750,7 +776,7 @@ Return ONLY valid JSON, no additional text.`,
   // Follow a user
   app.post("/api/users/:userId/follow", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const followerId = (req.user as any).claims.sub;
+      const followerId = await requireUserId(req);
       const followingId = req.params.userId as string;
 
       if (followerId === followingId) {
@@ -778,7 +804,7 @@ Return ONLY valid JSON, no additional text.`,
   // Unfollow a user
   app.delete("/api/users/:userId/follow", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const followerId = (req.user as any).claims.sub;
+      const followerId = await requireUserId(req);
       const followingId = req.params.userId as string;
 
       await storage.unfollowUser(followerId, followingId);
@@ -792,7 +818,7 @@ Return ONLY valid JSON, no additional text.`,
   // Check if current user is following a specific user
   app.get("/api/users/:userId/following-status", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const followerId = (req.user as any).claims.sub;
+      const followerId = await requireUserId(req);
       const followingId = req.params.userId as string;
 
       const isFollowing = await storage.isFollowing(followerId, followingId);
@@ -842,7 +868,7 @@ Return ONLY valid JSON, no additional text.`,
   // Like a recipe
   app.post("/api/recipes/:id/like", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const recipeId = parseInt(req.params.id);
 
       const recipe = await storage.getRecipe(recipeId);
@@ -867,7 +893,7 @@ Return ONLY valid JSON, no additional text.`,
   // Unlike a recipe
   app.delete("/api/recipes/:id/like", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const recipeId = parseInt(req.params.id);
 
       await storage.unlikeRecipe(userId, recipeId);
@@ -882,7 +908,7 @@ Return ONLY valid JSON, no additional text.`,
   // Check if current user has liked a recipe
   app.get("/api/recipes/:id/like-status", optionalAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.user ? (req.user as any).claims.sub : null;
+      const userId = await getUserId(req);
       const recipeId = parseInt(req.params.id);
 
       const likeCount = await storage.getLikeCount(recipeId);
@@ -898,7 +924,7 @@ Return ONLY valid JSON, no additional text.`,
   // Get recipes liked by current user
   app.get("/api/user/liked-recipes", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const likedRecipes = await storage.getLikedRecipesByUser(userId);
       res.json(likedRecipes);
     } catch (error) {
@@ -914,12 +940,9 @@ Return ONLY valid JSON, no additional text.`,
       const offset = parseInt(req.query.offset as string) || 0;
       
       // If user is authenticated, exclude their own recipes
-      let excludeUserId: string | undefined;
-      if (req.user) {
-        excludeUserId = (req.user as any).claims?.sub;
-      }
+      const excludeUserId = await getUserId(req);
 
-      const recipes = await storage.getPublicRecipes(limit, offset, excludeUserId);
+      const recipes = await storage.getPublicRecipes(limit, offset, excludeUserId ?? undefined);
       res.json(recipes);
     } catch (error) {
       console.error("Error fetching explore recipes:", error);
@@ -930,7 +953,7 @@ Return ONLY valid JSON, no additional text.`,
   // Chefs page - get recipes from followed users
   app.get("/api/chefs", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
 
@@ -946,7 +969,7 @@ Return ONLY valid JSON, no additional text.`,
   app.patch("/api/recipes/:id/visibility", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const userId = (req.user as any).claims.sub;
+      const userId = await requireUserId(req);
       const { isPublic } = req.body;
 
       if (typeof isPublic !== "boolean") {

@@ -4,27 +4,41 @@ import { eq } from "drizzle-orm";
 
 // Interface for auth storage operations
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
+// Note: All methods use replitId (the external auth provider's sub claim) for lookups.
+// The internal id (UUID) is auto-generated and used for foreign key references.
 export interface IAuthStorage {
-  getUser(id: string): Promise<User | undefined>;
+  getUser(replitId: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  updateUser(id: string, data: Partial<UpsertUser>): Promise<User | undefined>;
-  deleteUser(id: string): Promise<void>;
+  updateUser(replitId: string, data: Partial<UpsertUser>): Promise<User | undefined>;
+  deleteUser(replitId: string): Promise<void>;
 }
 
 class AuthStorage implements IAuthStorage {
-  async getUser(id: string): Promise<User | undefined> {
+  // Get user by replitId (external auth identifier)
+  async getUser(replitId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
+    return user;
+  }
+
+  // Get user by internal UUID id
+  async getUserById(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Upsert by replitId - if user exists, update; otherwise create with new UUID id
     const [user] = await db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
-        target: users.id,
+        target: users.replitId,
         set: {
-          ...userData,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
           updatedAt: new Date(),
         },
       })
@@ -32,20 +46,20 @@ class AuthStorage implements IAuthStorage {
     return user;
   }
 
-  async updateUser(id: string, data: Partial<UpsertUser>): Promise<User | undefined> {
+  async updateUser(replitId: string, data: Partial<UpsertUser>): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set({
         ...data,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, id))
+      .where(eq(users.replitId, replitId))
       .returning();
     return user;
   }
 
-  async deleteUser(id: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+  async deleteUser(replitId: string): Promise<void> {
+    await db.delete(users).where(eq(users.replitId, replitId));
   }
 }
 
