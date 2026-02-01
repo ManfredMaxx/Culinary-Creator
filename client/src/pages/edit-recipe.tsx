@@ -11,6 +11,8 @@ import {
   Save,
   GripVertical,
   MoreVertical,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -77,6 +80,7 @@ export default function EditRecipe() {
   const [coverImageChanged, setCoverImageChanged] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [photoFilter, setPhotoFilter] = useState<"all" | "unassigned">("all");
+  const [isPublic, setIsPublic] = useState(false);
   const coverImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -87,6 +91,7 @@ export default function EditRecipe() {
       setPrepTime(recipe.prepTime);
       setCookTime(recipe.cookTime);
       setCoverImage(recipe.coverImage || null);
+      setIsPublic(recipe.isPublic || false);
       setIngredients(
         recipe.ingredients.map((ing) => ({
           name: ing.name,
@@ -114,6 +119,7 @@ export default function EditRecipe() {
         servings,
         prepTime,
         cookTime,
+        isPublic,
         ingredients: ingredients.filter((ing) => ing.name.trim()),
         steps: steps.map((s, i) => ({ ...s, stepNumber: i + 1 })),
       };
@@ -506,6 +512,31 @@ export default function EditRecipe() {
                     data-testid="input-cook-time"
                   />
                 </div>
+              </div>
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  {isPublic ? (
+                    <Globe className="w-5 h-5 text-primary" />
+                  ) : (
+                    <Lock className="w-5 h-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <Label htmlFor="visibility" className="text-base font-medium">
+                      {isPublic ? "Public Recipe" : "Private Recipe"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {isPublic
+                        ? "Visible to everyone on the Explore page"
+                        : "Only you can see this recipe"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="visibility"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                  data-testid="switch-visibility"
+                />
               </div>
             </CardContent>
           </Card>
