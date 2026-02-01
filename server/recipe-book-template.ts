@@ -280,11 +280,13 @@ export function generateRecipeBookHtml(data: BookData): string {
 
     /* Table of Contents */
     .toc-page {
-      min-height: 100vh;
+      height: 792pt;
       padding: 4rem 3rem;
       background: var(--color-cream);
       page-break-after: always;
+      page-break-inside: avoid;
       position: relative;
+      overflow: hidden;
     }
 
     .toc-heading {
@@ -300,31 +302,38 @@ export function generateRecipeBookHtml(data: BookData): string {
       list-style: none;
       max-width: 500px;
       margin: 0 auto;
+      page-break-inside: avoid;
     }
 
     .toc-entry {
-      display: flex;
-      align-items: baseline;
+      display: table;
+      width: 100%;
       padding: 0.8rem 0;
       border-bottom: 1px solid rgba(217, 164, 65, 0.2);
+      page-break-inside: avoid;
     }
 
     .toc-title {
+      display: table-cell;
       font-size: 1.1rem;
       color: var(--color-text);
+      white-space: nowrap;
     }
 
     .toc-dots {
-      flex: 1;
+      display: table-cell;
+      width: 100%;
       border-bottom: 1px dotted var(--color-gold);
-      margin: 0 0.5rem;
-      min-width: 20px;
+      vertical-align: bottom;
+      padding: 0 0.5rem;
     }
 
     .toc-page-num {
+      display: table-cell;
       font-family: 'Playfair Display', Georgia, serif;
       color: var(--color-burgundy);
       font-weight: 600;
+      white-space: nowrap;
     }
 
     /* Recipe Pages */
