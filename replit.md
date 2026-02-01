@@ -79,6 +79,13 @@ The server uses a modular integration pattern with dedicated folders under `serv
 ### Authentication Flow
 The app uses Replit Auth with OIDC. Users authenticate through Replit's identity provider, and sessions are stored in PostgreSQL. The `isAuthenticated` middleware protects API routes, and user data is synced to the local database on login.
 
+**ID Architecture** (designed for future auth provider migration):
+- `id` (UUID): Internal primary key used for all database foreign keys (recipes, follows, likes)
+- `replitId`: External auth provider identifier (the `sub` claim from OIDC)
+- Auth flow: Login → lookup by `replitId` → use internal `id` for all operations
+- Helper functions in routes.ts: `getUserId()` for optional auth, `requireUserId()` for authenticated routes
+- Storage methods: `getUser(replitId)` for auth lookups, `getUserById(id)` for internal operations
+
 ## External Dependencies
 
 ### AI Services

@@ -21,7 +21,7 @@ import {
   type User,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, ne, sql, count } from "drizzle-orm";
+import { eq, desc, and, ne, sql, count, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Recipes
@@ -229,6 +229,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select({
         id: users.id,
+        replitId: users.replitId,
         username: users.username,
         email: users.email,
         firstName: users.firstName,
@@ -249,6 +250,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select({
         id: users.id,
+        replitId: users.replitId,
         username: users.username,
         email: users.email,
         firstName: users.firstName,
@@ -407,7 +409,7 @@ export class DatabaseStorage implements IStorage {
       .from(recipes)
       .where(and(
         eq(recipes.isPublic, true),
-        sql`${recipes.userId} = ANY(${followingIds})`
+        inArray(recipes.userId, followingIds)
       ))
       .orderBy(desc(recipes.createdAt))
       .limit(limit)
