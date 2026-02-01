@@ -4,9 +4,12 @@ import { isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { storage } from "../../storage";
 
+const validColorThemes = ["michelin-star", "forest-bistro", "vaporwave", "high-end-bar"] as const;
+
 const updateProfileSchema = z.object({
   firstName: z.string().transform(s => s?.trim()).optional(),
   lastName: z.string().transform(s => s?.trim()).optional(),
+  colorTheme: z.enum(validColorThemes).optional(),
 });
 
 // Register auth-specific routes
