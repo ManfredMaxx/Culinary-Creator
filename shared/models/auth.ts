@@ -13,6 +13,10 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
 
+// Available color themes
+export const colorThemes = ["michelin-star", "forest-bistro", "vaporwave", "high-end-bar"] as const;
+export type ColorTheme = typeof colorThemes[number];
+
 // User storage table.
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
@@ -22,6 +26,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  colorTheme: varchar("color_theme").default("michelin-star"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
