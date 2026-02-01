@@ -1,19 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Mic, Camera, BookOpen, Flame, Sparkles, FileText, ChefHat, UtensilsCrossed } from "lucide-react";
+import { Mic, Camera, BookOpen, Flame, Sparkles, ChefHat } from "lucide-react";
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/70 border-b border-border/50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <UtensilsCrossed className="w-7 h-7 text-primary" />
-              <div className="absolute inset-0 blur-sm bg-primary/30 -z-10" />
-            </div>
-            <span className="font-serif text-xl tracking-wide">RecipeVault</span>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl text-primary" style={{ fontFamily: "'Times New Roman', Times, serif" }}>bwr</span>
+            <span className="font-serif text-xl tracking-wide">BakedWithRowan</span>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -201,9 +198,9 @@ export default function Landing() {
 
       <footer className="border-t border-border/50 py-10 px-4 bg-card/30 backdrop-blur-sm">
         <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <UtensilsCrossed className="w-5 h-5 text-primary" />
-            <span className="font-serif tracking-wide">RecipeVault</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xl text-primary" style={{ fontFamily: "'Times New Roman', Times, serif" }}>bwr</span>
+            <span className="font-serif tracking-wide">BakedWithRowan</span>
           </div>
           <p className="text-sm text-muted-foreground">
             Crafted for those who cook with passion

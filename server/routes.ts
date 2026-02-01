@@ -734,7 +734,7 @@ function generateRecipeHtml(recipe: any): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${recipe.title} - RecipeVault</title>
+  <title>${recipe.title} - BakedWithRowan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -805,7 +805,7 @@ function generateRecipeHtml(recipe: any): string {
       `;
     }).join("")}
   </div>
-  <div class="footer">Created with RecipeVault</div>
+  <div class="footer">Created with BakedWithRowan</div>
 </body>
 </html>`;
 }
@@ -818,7 +818,7 @@ function generateRecipeBookHtml(title: string, recipes: any[]): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} - RecipeVault</title>
+  <title>${title} - BakedWithRowan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -858,7 +858,7 @@ function generateRecipeBookHtml(title: string, recipes: any[]): string {
   <div class="page cover">
     <h1>${title}</h1>
     <p class="subtitle">${recipes.length} curated recipes</p>
-    <p class="footer">Created with RecipeVault</p>
+    <p class="footer">Created with BakedWithRowan</p>
   </div>
 
   <div class="page toc">

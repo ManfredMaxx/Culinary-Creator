@@ -1,8 +1,8 @@
-# RecipeVault
+# BakedWithRowan
 
 ## Overview
 
-RecipeVault is a personal recipe collection web application that transforms cooking stories into beautiful recipes. Users can record recipes verbally using voice-to-text conversion, capture cooking stages with photos, and create printable recipe books to share with family and friends.
+BakedWithRowan is a personal recipe collection web application that transforms cooking stories into beautiful recipes. Users can record recipes verbally using voice-to-text conversion, capture cooking stages with photos, and create printable recipe books to share with family and friends.
 
 The application features:
 - Voice-to-recipe transcription using AI
