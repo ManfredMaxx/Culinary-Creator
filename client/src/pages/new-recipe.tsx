@@ -52,6 +52,10 @@ export default function NewRecipe() {
       });
 
       const response = await apiRequest("POST", "/api/transcribe-recipe", { audio: base64Audio });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to process your recording");
+      }
       return await response.json() as RecipePreview;
     },
     onSuccess: (data) => {
@@ -59,11 +63,11 @@ export default function NewRecipe() {
       setStep("preview");
       setIsProcessing(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Transcription error:", error);
       toast({
         title: "Error",
-        description: "Failed to process your recording. Please try again.",
+        description: error.message || "Failed to process your recording. Please try again.",
         variant: "destructive",
       });
       setIsProcessing(false);
