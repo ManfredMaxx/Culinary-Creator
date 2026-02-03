@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Loader2, Check, Edit, Mic, Scan, Plus, X } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Check, Edit, Mic, Scan, Plus, X, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -213,6 +213,19 @@ export default function NewRecipe() {
     setRecipePreview({ ...recipePreview, steps: newSteps });
   };
 
+  const addStep = () => {
+    if (!recipePreview) return;
+    const newSteps = [...recipePreview.steps, { stepNumber: recipePreview.steps.length + 1, instruction: "", duration: 1 }];
+    setRecipePreview({ ...recipePreview, steps: newSteps });
+  };
+
+  const removeStep = (index: number) => {
+    if (!recipePreview) return;
+    const newSteps = recipePreview.steps.filter((_, i) => i !== index);
+    const renumberedSteps = newSteps.map((step, i) => ({ ...step, stepNumber: i + 1 }));
+    setRecipePreview({ ...recipePreview, steps: renumberedSteps });
+  };
+
   const handleStepKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -304,14 +317,18 @@ export default function NewRecipe() {
 
         {step === "record" && (
           <Tabs defaultValue="voice" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="voice" data-testid="tab-voice">
                 <Mic className="w-4 h-4 mr-2" />
-                Voice Recording
+                Voice
               </TabsTrigger>
               <TabsTrigger value="scan" data-testid="tab-scan">
                 <Scan className="w-4 h-4 mr-2" />
-                Scan Recipe
+                Scan
+              </TabsTrigger>
+              <TabsTrigger value="manual" data-testid="tab-manual">
+                <PenLine className="w-4 h-4 mr-2" />
+                Manual
               </TabsTrigger>
             </TabsList>
             
@@ -369,6 +386,63 @@ export default function NewRecipe() {
                     <li className="flex items-start gap-2">
                       <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
                       Make sure the text is readable and not blurry
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="manual" className="space-y-6">
+              <Card>
+                <CardContent className="p-8 flex flex-col items-center justify-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                    <PenLine className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-medium">Type Your Recipe</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Enter all the details manually - perfect for family recipes
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setRecipePreview({
+                        title: "",
+                        description: "",
+                        servings: 4,
+                        prepTime: 15,
+                        cookTime: 30,
+                        ingredients: [{ name: "", quantity: "", unit: "" }],
+                        steps: [{ stepNumber: 1, instruction: "", duration: 1 }],
+                      });
+                      setStep("preview");
+                    }}
+                    data-testid="button-start-manual"
+                  >
+                    <PenLine className="w-4 h-4 mr-2" />
+                    Start Typing Recipe
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium mb-3">Manual entry is great for:</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Family recipes passed down through generations
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Recipes you know by heart
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Creating your own original recipes
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Full control over every detail
                     </li>
                   </ul>
                 </CardContent>
@@ -496,12 +570,15 @@ export default function NewRecipe() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <CardTitle>Instructions</CardTitle>
+                <Button variant="outline" size="sm" onClick={addStep} data-testid="button-add-step">
+                  <Plus className="w-4 h-4 mr-1" /> Add Step
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {(recipePreview.steps || []).map((recipeStep, index) => (
-                  <div key={index} className="flex gap-4">
+                  <div key={index} className="flex gap-4 items-start">
                     <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium flex-shrink-0">
                       {recipeStep.stepNumber}
                     </div>
@@ -513,8 +590,22 @@ export default function NewRecipe() {
                       className="flex-1"
                       data-testid={`input-step-${index}`}
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeStep(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                      data-testid={`button-remove-step-${index}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
+                {(recipePreview.steps || []).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    No steps yet. Click "Add Step" to add one.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
