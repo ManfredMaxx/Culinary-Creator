@@ -8,6 +8,7 @@ import type {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000
 const TOAST_AUTO_DISMISS_DELAY = 4000
+const TOAST_ERROR_DISMISS_DELAY = 15000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -162,12 +163,11 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  // Auto-dismiss non-error toasts after delay
-  if (props.variant !== "destructive") {
-    setTimeout(() => {
-      dismiss()
-    }, TOAST_AUTO_DISMISS_DELAY)
-  }
+  // Auto-dismiss toasts after delay (15s for errors, 4s for others)
+  const delay = props.variant === "destructive" ? TOAST_ERROR_DISMISS_DELAY : TOAST_AUTO_DISMISS_DELAY
+  setTimeout(() => {
+    dismiss()
+  }, delay)
 
   return {
     id: id,

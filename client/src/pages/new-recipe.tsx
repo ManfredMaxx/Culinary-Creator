@@ -201,6 +201,37 @@ export default function NewRecipe() {
     setRecipePreview({ ...recipePreview, steps: newSteps });
   };
 
+  const handleStepKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!recipePreview) return;
+      
+      const textarea = e.currentTarget;
+      const cursorPosition = textarea.selectionStart;
+      const currentText = recipePreview.steps[index].instruction;
+      
+      const textBefore = currentText.slice(0, cursorPosition);
+      const textAfter = currentText.slice(cursorPosition);
+      
+      const newSteps = [...recipePreview.steps];
+      newSteps[index] = { ...newSteps[index], instruction: textBefore };
+      
+      const newStep = { stepNumber: index + 2, instruction: textAfter, duration: 1 };
+      newSteps.splice(index + 1, 0, newStep);
+      
+      const renumberedSteps = newSteps.map((step, i) => ({ ...step, stepNumber: i + 1 }));
+      setRecipePreview({ ...recipePreview, steps: renumberedSteps });
+      
+      setTimeout(() => {
+        const nextTextarea = document.querySelector(`[data-testid="input-step-${index + 1}"]`) as HTMLTextAreaElement;
+        if (nextTextarea) {
+          nextTextarea.focus();
+          nextTextarea.setSelectionRange(0, 0);
+        }
+      }, 0);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -446,6 +477,7 @@ export default function NewRecipe() {
                     <Textarea
                       value={recipeStep.instruction ?? ""}
                       onChange={(e) => updateStep(index, e.target.value)}
+                      onKeyDown={(e) => handleStepKeyDown(e, index)}
                       rows={2}
                       className="flex-1"
                       data-testid={`input-step-${index}`}

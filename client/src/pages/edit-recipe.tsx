@@ -296,6 +296,36 @@ export default function EditRecipe() {
     setSteps(updated);
   };
 
+  const handleStepKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, index: number) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      
+      const textarea = e.currentTarget;
+      const cursorPosition = textarea.selectionStart;
+      const currentText = steps[index].instruction;
+      
+      const textBefore = currentText.slice(0, cursorPosition);
+      const textAfter = currentText.slice(cursorPosition);
+      
+      const newSteps = [...steps];
+      newSteps[index] = { ...newSteps[index], instruction: textBefore };
+      
+      const newStep: EditableStep = { stepNumber: index + 2, instruction: textAfter, duration: null };
+      newSteps.splice(index + 1, 0, newStep);
+      
+      const renumberedSteps = newSteps.map((step, i) => ({ ...step, stepNumber: i + 1 }));
+      setSteps(renumberedSteps);
+      
+      setTimeout(() => {
+        const nextTextarea = document.querySelector(`[data-testid="input-step-instruction-${index + 1}"]`) as HTMLTextAreaElement;
+        if (nextTextarea) {
+          nextTextarea.focus();
+          nextTextarea.setSelectionRange(0, 0);
+        }
+      }, 0);
+    }
+  };
+
   if (isLoading || !initialized) {
     return (
       <div className="min-h-screen bg-background">
@@ -611,8 +641,10 @@ export default function EditRecipe() {
                         <Textarea
                           value={step.instruction}
                           onChange={(e) => updateStep(index, "instruction", e.target.value)}
+                          onKeyDown={(e) => handleStepKeyDown(e, index)}
                           placeholder="Describe this step..."
                           className="min-h-20"
+                          data-testid={`input-step-instruction-${index}`}
                         />
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
