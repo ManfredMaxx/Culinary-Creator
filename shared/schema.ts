@@ -203,10 +203,10 @@ export const transcriptionStepSchema = z.object({
 
 export const transcriptionResponseSchema = z.object({
   title: z.string(),
-  description: z.string().optional(),
-  servings: z.number().optional(),
-  prepTime: z.number().optional(),
-  cookTime: z.number().optional(),
+  description: z.string().nullish(),
+  servings: z.number().nullish(),
+  prepTime: z.number().nullish(),
+  cookTime: z.number().nullish(),
   ingredients: z.array(transcriptionIngredientSchema),
   steps: z.array(transcriptionStepSchema),
 });
