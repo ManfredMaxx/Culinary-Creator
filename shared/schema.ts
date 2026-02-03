@@ -198,11 +198,11 @@ export const transcriptionIngredientSchema = z.object({
 export const transcriptionStepSchema = z.object({
   stepNumber: z.number(),
   instruction: z.string(),
-  duration: z.number().optional(),
+  duration: z.number().nullish().default(1),
 });
 
 export const transcriptionResponseSchema = z.object({
-  title: z.string(),
+  title: z.string().nullish().default("My New Recipe"),
   description: z.string().nullish(),
   servings: z.number().nullish(),
   prepTime: z.number().nullish(),
