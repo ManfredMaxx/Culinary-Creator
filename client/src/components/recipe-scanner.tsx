@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { Camera, Upload, X, Loader2, Image, Scan, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import { convertToJpeg } from "@/lib/image-utils";
 import { convertPdfToImages, isPdfFile, PDFConversionProgress } from "@/lib/pdf-utils";
 
@@ -25,6 +26,7 @@ export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeSc
   const [pdfProgress, setPdfProgress] = useState<PDFConversionProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFiles = useCallback(
     async (fileList: FileList) => {
@@ -75,10 +77,15 @@ export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeSc
       } catch (error) {
         console.error("File processing error:", error);
         setPdfProgress(null);
+        toast({
+          title: "File Processing Error",
+          description: error instanceof Error ? error.message : "Failed to process one or more files. Please try again.",
+          variant: "destructive",
+        });
       }
       setIsConverting(false);
     },
-    []
+    [toast]
   );
 
   const handleDrop = useCallback(
