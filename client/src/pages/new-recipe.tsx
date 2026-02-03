@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Loader2, Check, Edit, Mic, Scan } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Check, Edit, Mic, Scan, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -191,6 +191,18 @@ export default function NewRecipe() {
     if (!recipePreview) return;
     const newIngredients = [...recipePreview.ingredients];
     newIngredients[index] = { ...newIngredients[index], [field]: value };
+    setRecipePreview({ ...recipePreview, ingredients: newIngredients });
+  };
+
+  const addIngredient = () => {
+    if (!recipePreview) return;
+    const newIngredients = [...recipePreview.ingredients, { name: "", quantity: "", unit: "", notes: "" }];
+    setRecipePreview({ ...recipePreview, ingredients: newIngredients });
+  };
+
+  const removeIngredient = (index: number) => {
+    if (!recipePreview) return;
+    const newIngredients = recipePreview.ingredients.filter((_, i) => i !== index);
     setRecipePreview({ ...recipePreview, ingredients: newIngredients });
   };
 
@@ -432,35 +444,54 @@ export default function NewRecipe() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
                 <CardTitle>Ingredients</CardTitle>
+                <Button variant="outline" size="sm" onClick={addIngredient} data-testid="button-add-ingredient">
+                  <Plus className="w-4 h-4 mr-1" /> Add
+                </Button>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(recipePreview.ingredients || []).map((ingredient, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2">
-                    <Input
-                      className="col-span-2"
-                      placeholder="Qty"
-                      value={ingredient.quantity ?? ""}
-                      onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
-                      data-testid={`input-ingredient-qty-${index}`}
-                    />
-                    <Input
-                      className="col-span-2"
-                      placeholder="Unit"
-                      value={ingredient.unit ?? ""}
-                      onChange={(e) => updateIngredient(index, "unit", e.target.value)}
-                      data-testid={`input-ingredient-unit-${index}`}
-                    />
-                    <Input
-                      className="col-span-8"
-                      placeholder="Ingredient"
-                      value={ingredient.name ?? ""}
-                      onChange={(e) => updateIngredient(index, "name", e.target.value)}
-                      data-testid={`input-ingredient-name-${index}`}
-                    />
+                  <div key={index} className="flex gap-2 items-start">
+                    <div className="flex-1 grid grid-cols-12 gap-2">
+                      <Input
+                        className="col-span-2"
+                        placeholder="Qty"
+                        value={ingredient.quantity ?? ""}
+                        onChange={(e) => updateIngredient(index, "quantity", e.target.value)}
+                        data-testid={`input-ingredient-qty-${index}`}
+                      />
+                      <Input
+                        className="col-span-2"
+                        placeholder="Unit"
+                        value={ingredient.unit ?? ""}
+                        onChange={(e) => updateIngredient(index, "unit", e.target.value)}
+                        data-testid={`input-ingredient-unit-${index}`}
+                      />
+                      <Input
+                        className="col-span-8"
+                        placeholder="Ingredient"
+                        value={ingredient.name ?? ""}
+                        onChange={(e) => updateIngredient(index, "name", e.target.value)}
+                        data-testid={`input-ingredient-name-${index}`}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeIngredient(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                      data-testid={`button-remove-ingredient-${index}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
+                {(recipePreview.ingredients || []).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    No ingredients yet. Click "Add" to add one.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
