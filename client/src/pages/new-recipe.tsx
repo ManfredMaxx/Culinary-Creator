@@ -277,20 +277,20 @@ export default function NewRecipe() {
         </div>
 
         <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${
                 step === "record"
                   ? "bg-primary text-primary-foreground"
                   : "bg-accent text-accent-foreground"
               }`}
             >
-              {step !== "record" ? <Check className="w-5 h-5" /> : "1"}
+              {step !== "record" ? <Check className="w-4 h-4" /> : "1"}
             </div>
             <span className="text-sm font-medium">Input</span>
-            <div className="w-12 h-0.5 bg-border mx-2" />
+            <div className="w-6 h-0.5 bg-border mx-1" />
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${
                 step === "preview"
                   ? "bg-primary text-primary-foreground"
                   : step === "photos"
@@ -298,12 +298,12 @@ export default function NewRecipe() {
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {step === "photos" ? <Check className="w-5 h-5" /> : "2"}
+              {step === "photos" ? <Check className="w-4 h-4" /> : "2"}
             </div>
             <span className="text-sm font-medium">Review</span>
-            <div className="w-12 h-0.5 bg-border mx-2" />
+            <div className="w-6 h-0.5 bg-border mx-1" />
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm ${
                 step === "photos"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground"
