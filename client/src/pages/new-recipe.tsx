@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Loader2, Check, Edit } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, Check, Edit, Mic, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VoiceRecorder } from "@/components/voice-recorder";
+import { RecipeScanner } from "@/components/recipe-scanner";
 import { ImageUploader } from "@/components/image-uploader";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -35,6 +37,8 @@ export default function NewRecipe() {
   const [recipePreview, setRecipePreview] = useState<RecipePreview | null>(null);
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const [isScanning, setIsScanning] = useState(false);
 
   const transcribeMutation = useMutation({
     mutationFn: async (audioBlob: Blob) => {
@@ -65,6 +69,47 @@ export default function NewRecipe() {
       setIsProcessing(false);
     },
   });
+
+  const scanMutation = useMutation({
+    mutationFn: async (images: string[]) => {
+      const response = await apiRequest("POST", "/api/scan-recipe", { images });
+      return await response.json() as RecipePreview;
+    },
+    onSuccess: (data) => {
+      setRecipePreview(data);
+      setStep("preview");
+      setIsScanning(false);
+    },
+    onError: (error: Error) => {
+      console.error("Scan error:", error);
+      // Extract error message from server response if available
+      let errorMessage = "Failed to extract recipe from images. Please try again with clearer images.";
+      if (error.message) {
+        try {
+          const parsed = JSON.parse(error.message.replace(/^\d+:\s*/, ""));
+          if (parsed.error) {
+            errorMessage = parsed.error;
+          }
+        } catch {
+          // If not JSON, check for common patterns
+          if (error.message.includes("missing required fields")) {
+            errorMessage = error.message.replace(/^\d+:\s*/, "");
+          }
+        }
+      }
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      setIsScanning(false);
+    },
+  });
+
+  const handleScanComplete = (images: string[]) => {
+    setIsScanning(true);
+    scanMutation.mutate(images);
+  };
 
   const analyzeImagesMutation = useMutation({
     mutationFn: async (imageFiles: { file: File; preview: string }[]) => {
@@ -186,7 +231,7 @@ export default function NewRecipe() {
             >
               {step !== "record" ? <Check className="w-5 h-5" /> : "1"}
             </div>
-            <span className="text-sm font-medium">Record</span>
+            <span className="text-sm font-medium">Input</span>
             <div className="w-12 h-0.5 bg-border mx-2" />
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
@@ -215,35 +260,78 @@ export default function NewRecipe() {
         </div>
 
         {step === "record" && (
-          <div className="space-y-6">
-            <VoiceRecorder
-              onRecordingComplete={handleRecordingComplete}
-              isProcessing={isProcessing}
-            />
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-medium mb-3">Tips for a great recording:</h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                    Start with the recipe name and a brief description
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                    List all ingredients with quantities (e.g., "2 cups flour, 1 teaspoon salt")
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                    Describe each step in order, mentioning timing when relevant
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                    Mention serving size, prep time, and cook time if you know them
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
+          <Tabs defaultValue="voice" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="voice" data-testid="tab-voice">
+                <Mic className="w-4 h-4 mr-2" />
+                Voice Recording
+              </TabsTrigger>
+              <TabsTrigger value="scan" data-testid="tab-scan">
+                <Scan className="w-4 h-4 mr-2" />
+                Scan Recipe
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="voice" className="space-y-6">
+              <VoiceRecorder
+                onRecordingComplete={handleRecordingComplete}
+                isProcessing={isProcessing}
+              />
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium mb-3">Tips for a great recording:</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Start with the recipe name and a brief description
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      List all ingredients with quantities (e.g., "2 cups flour, 1 teaspoon salt")
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Describe each step in order, mentioning timing when relevant
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Mention serving size, prep time, and cook time if you know them
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="scan" className="space-y-6">
+              <RecipeScanner
+                onScanComplete={handleScanComplete}
+                isProcessing={isScanning}
+              />
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium mb-3">Tips for scanning recipes:</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Take clear, well-lit photos of recipe pages
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Upload multiple images if the recipe spans several pages
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Works with printed recipes, cookbooks, or handwritten notes
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      Make sure the text is readable and not blurry
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         )}
 
         {step === "preview" && recipePreview && (

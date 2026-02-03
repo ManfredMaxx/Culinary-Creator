@@ -6,6 +6,7 @@ BakedWithRowan is a personal recipe collection web application that transforms c
 
 The application features:
 - Voice-to-recipe transcription using AI
+- Image-based recipe scanning using AI vision (upload photos of recipes from cookbooks, handwritten notes, or printed recipes)
 - Photo capture and AI-powered cooking stage recognition
 - Recipe management (create, view, edit, delete)
 - Recipe book generation with HTML and PDF export options
@@ -57,6 +58,7 @@ The frontend follows a pages-based structure with reusable components. Key pages
 - **AI Integration**: OpenAI API (via Replit AI Integrations) for:
   - Speech-to-text transcription
   - Recipe parsing from voice input
+  - Vision-based recipe extraction from images (GPT-4 vision)
   - Image generation capabilities
 
 The server uses a modular integration pattern with dedicated folders under `server/replit_integrations/` for auth, audio processing, chat, image generation, and batch processing utilities.

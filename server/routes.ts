@@ -560,6 +560,88 @@ Return ONLY valid JSON, no additional text.`,
     }
   });
 
+  // Scan recipe from images/PDFs
+  const scanRecipeSchema = z.object({
+    images: z.array(z.string()).min(1, "At least one image is required"),
+  });
+
+  app.post("/api/scan-recipe", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const parseResult = scanRecipeSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0]?.message || "Images array required" });
+      }
+      const { images } = parseResult.data;
+
+      // Build message content with all images
+      const imageContents: Array<{type: "image_url"; image_url: {url: string}}> = images.map((imageData: string) => ({
+        type: "image_url" as const,
+        image_url: { url: imageData },
+      }));
+
+      // Use GPT-4 vision to extract recipe from images
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert recipe extractor. Analyze the provided image(s) of a recipe (from a cookbook, handwritten notes, printed recipe, or PDF) and extract all recipe information into a structured JSON format.
+
+Extract the following information exactly as shown in the source:
+- title: The name of the recipe
+- description: A brief description of the dish (create one if not provided)
+- servings: Number of servings (use null if not mentioned)
+- prepTime: Preparation time in minutes (use null if not mentioned)
+- cookTime: Cooking time in minutes (use null if not mentioned)
+- ingredients: Array of { name, quantity, unit, notes }
+  - Extract EXACT quantities and units as written (e.g., "2 cups", "1/4 tsp", "3 tablespoons")
+  - If no quantity, use empty string
+  - If no unit, use empty string
+  - Include any notes in parentheses
+- steps: Array of { stepNumber, instruction, duration (in minutes, optional) }
+  - If the recipe has numbered steps, replicate them exactly
+  - If not numbered, create logical step numbers
+  - Preserve the exact wording of instructions
+
+IMPORTANT: Replicate the recipe exactly as written. Do not paraphrase or simplify.
+If multiple images are provided, combine them into one complete recipe.
+Return ONLY valid JSON, no additional text.`,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Please extract the recipe from these image(s):" },
+              ...imageContents,
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 4096,
+      });
+
+      const rawContent = response.choices[0]?.message?.content || "{}";
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(rawContent);
+      } catch {
+        return res.status(500).json({ error: "AI returned invalid JSON. Please try again." });
+      }
+
+      const validationResult = transcriptionResponseSchema.safeParse(parsedJson);
+      if (!validationResult.success) {
+        const missingFields = validationResult.error.errors.map(e => e.path.join(".")).join(", ");
+        return res.status(500).json({ 
+          error: `AI response is missing required fields: ${missingFields || "title, ingredients, or steps"}. Please try again with a clearer image.` 
+        });
+      }
+
+      res.json(validationResult.data);
+    } catch (error) {
+      console.error("Error scanning recipe:", error);
+      res.status(500).json({ error: "Failed to scan recipe" });
+    }
+  });
+
   // Analyze cooking stage images
   app.post("/api/analyze-images", isAuthenticated, async (req: Request, res: Response) => {
     try {
