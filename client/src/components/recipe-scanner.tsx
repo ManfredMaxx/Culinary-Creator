@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from "react";
-import { Camera, Upload, X, Loader2, Image, Scan } from "lucide-react";
+import { Camera, Upload, X, Loader2, Image, Scan, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { convertToJpeg } from "@/lib/image-utils";
+import { convertPdfToImages, isPdfFile, PDFConversionProgress } from "@/lib/pdf-utils";
 
 interface RecipeScannerProps {
   onScanComplete: (images: string[]) => void;
@@ -13,45 +14,67 @@ type UploadedFile = {
   id: string;
   file: File;
   preview: string;
+  isPdf?: boolean;
+  pageNumber?: number;
 };
 
 export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeScannerProps) {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<PDFConversionProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(
     async (fileList: FileList) => {
-      const newFiles = Array.from(fileList).filter((file) => {
+      const validFiles = Array.from(fileList).filter((file) => {
         const type = file.type.toLowerCase();
         const name = file.name.toLowerCase();
         return (
           type.startsWith("image/") ||
           name.endsWith(".heic") ||
-          name.endsWith(".heif")
+          name.endsWith(".heif") ||
+          isPdfFile(file)
         );
       });
 
-      if (newFiles.length === 0) return;
+      if (validFiles.length === 0) return;
 
       setIsConverting(true);
       try {
-        const processedFiles = await Promise.all(
-          newFiles.map(async (file): Promise<UploadedFile> => {
+        const allProcessedFiles: UploadedFile[] = [];
+
+        for (const file of validFiles) {
+          if (isPdfFile(file)) {
+            const pdfImages = await convertPdfToImages(file, (progress) => {
+              setPdfProgress(progress);
+            });
+            
+            pdfImages.forEach((preview, index) => {
+              allProcessedFiles.push({
+                id: crypto.randomUUID(),
+                file,
+                preview,
+                isPdf: true,
+                pageNumber: index + 1,
+              });
+            });
+            setPdfProgress(null);
+          } else {
             const preview = await convertToJpeg(file);
-            return {
+            allProcessedFiles.push({
               id: crypto.randomUUID(),
               file,
               preview,
-            };
-          })
-        );
+            });
+          }
+        }
 
-        setFiles((prev) => [...prev, ...processedFiles]);
+        setFiles((prev) => [...prev, ...allProcessedFiles]);
       } catch (error) {
         console.error("File processing error:", error);
+        setPdfProgress(null);
       }
       setIsConverting(false);
     },
@@ -123,13 +146,15 @@ export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeSc
           <div className="text-center">
             <p className="text-lg font-medium">
               {isConverting
-                ? "Processing files..."
+                ? pdfProgress
+                  ? `Converting PDF page ${pdfProgress.currentPage} of ${pdfProgress.totalPages}...`
+                  : "Processing files..."
                 : isProcessing
                 ? "Extracting recipe..."
                 : "Scan a Recipe"}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Take a photo or upload images of a recipe
+              Take a photo, upload images, or upload a PDF of a recipe
             </p>
           </div>
 
@@ -157,7 +182,7 @@ export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeSc
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/*,.heic,.heif,.pdf,application/pdf"
               multiple
               className="hidden"
               onChange={handleInputChange}
@@ -201,8 +226,17 @@ export function RecipeScanner({ onScanComplete, isProcessing = false }: RecipeSc
                 >
                   <X className="w-3 h-3" />
                 </Button>
-                <div className="absolute bottom-2 left-2">
-                  <Image className="w-4 h-4 text-primary" />
+                <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                  {f.isPdf ? (
+                    <>
+                      <FileText className="w-4 h-4 text-primary" />
+                      <span className="text-xs text-primary font-medium">
+                        p.{f.pageNumber}
+                      </span>
+                    </>
+                  ) : (
+                    <Image className="w-4 h-4 text-primary" />
+                  )}
                 </div>
               </div>
             ))}
