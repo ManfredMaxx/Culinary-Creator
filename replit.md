@@ -125,7 +125,7 @@ Tickets track ideas, plans, and work items. Statuses: `idea` | `planned` | `in-p
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| M-1 | Replace Replit Auth with portable auth provider | idea | Current auth uses Replit OIDC. Schema already has internal UUID `id` separate from `replitId` for easy migration. Evaluate Auth0, Clerk, or Supabase Auth. |
+| M-1 | Replace Replit Auth with portable auth provider | idea | Current auth uses Replit OIDC. **Schema prep is done**: internal UUID `id` is already separate from `replitId`, and all foreign keys use the internal `id`. Remaining work: choose a new provider (Auth0, Clerk, or Supabase Auth), update `server/auth.ts`, and map new provider's user ID to `replitId` field. |
 | M-2 | Switch from Replit AI Integrations to direct OpenAI API | idea | Replace `AI_INTEGRATIONS_OPENAI_API_KEY` / `AI_INTEGRATIONS_OPENAI_BASE_URL` with direct OpenAI key and remove custom baseURL. |
 | M-3 | Migrate database to external PostgreSQL provider | idea | Standard PostgreSQL with Drizzle ORM — fully portable. Use `pg_dump`/`pg_restore`. Evaluate Neon (direct), Supabase, or Railway. |
 | M-4 | Deploy to alternative hosting | idea | Depends on M-1, M-2, M-3. Evaluate Vercel, Railway, Render, or Fly.io. Ensure ffmpeg availability for audio processing. |
