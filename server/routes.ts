@@ -7,6 +7,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, optionalAuth, registerAuthRoutes, authStorage } from "./replit_integrations/auth";
 import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audio/client";
 import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
+import { uploadImageToR2, generateImageKey } from "./r2";
 import { z } from "zod";
 import { transcriptionResponseSchema } from "@shared/schema";
 import { getAuth } from "@clerk/express";
@@ -190,11 +191,28 @@ export async function registerRoutes(
 
       // Create images if provided
       if (images && images.length > 0) {
+        // Upload all images to R2 before writing any DB records.
+        // If any upload fails, delete the partially-created recipe and abort.
+        let uploadedUrls: string[];
+        try {
+          uploadedUrls = await Promise.all(
+            images.map((imageData: string, index: number) =>
+              uploadImageToR2(imageData, generateImageKey(recipe.id, index === 0 ? "cover" : "step"))
+            )
+          );
+        } catch (uploadErr) {
+          console.error("R2 upload failed during recipe creation:", uploadErr);
+          // Clean up the recipe row so we don't leave an orphan
+          try { await storage.deleteRecipe(recipe.id); } catch {}
+          return res.status(500).json({ error: "Failed to upload image, please try again" });
+        }
+
         const createdImages = await Promise.all(
-          images.map(async (imageData: string, index: number) => {
-            // Analyze the image to determine its cooking stage
+          uploadedUrls.map(async (imageUrl: string, index: number) => {
+            const imageData = images[index];
+            // Analyze the original base64 to determine its cooking stage
             const analysis = await analyzeImage(imageData);
-            
+
             // Try to match to a step
             let matchedStepId = null;
             if (createdSteps.length > 0 && analysis.suggestedStep) {
@@ -208,7 +226,7 @@ export async function registerRoutes(
               recipeId: recipe.id,
               stepId: matchedStepId,
               imageUrl: null,
-              imageData: imageData.replace(/^data:image\/\w+;base64,/, ""),
+              imageData: imageUrl, // R2 public URL stored in imageData column
               stageDescription: analysis.description,
               aiAnalysis: analysis.rawAnalysis,
             });
@@ -218,7 +236,7 @@ export async function registerRoutes(
         // Set the first image as cover
         if (createdImages.length > 0) {
           await storage.updateRecipe(recipe.id, {
-            coverImage: `data:image/jpeg;base64,${createdImages[0].imageData}`,
+            coverImage: createdImages[0].imageData, // already an https:// URL
           });
         }
       }
@@ -414,14 +432,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Image data is required" });
       }
 
-      // Analyze the image
+      // Upload to R2 before writing the DB record so the record is never partially created
+      let imageUrl: string;
+      try {
+        imageUrl = await uploadImageToR2(imageData, generateImageKey(recipeId, "image"));
+      } catch (uploadErr) {
+        console.error("R2 upload failed:", uploadErr);
+        return res.status(500).json({ error: "Failed to upload image, please try again" });
+      }
+
+      // Analyze the original base64 for stage description
       const analysis = await analyzeImage(imageData);
 
       const image = await storage.createImage({
         recipeId,
         stepId: stepId || null,
         imageUrl: null,
-        imageData: imageData.replace(/^data:image\/\w+;base64,/, ""),
+        imageData: imageUrl, // R2 public URL stored in imageData column
         stageDescription: analysis.description,
         aiAnalysis: analysis.rawAnalysis,
       });
@@ -713,25 +740,26 @@ Return ONLY valid JSON, no additional text.`,
       throw new Error("No valid recipes found");
     }
 
-    // Process images to embed as base64 data URLs
+    // Process images — new records store R2 URLs, old records store raw base64.
+    // toImageSrc handles both transparently.
     const processedRecipes = validRecipes.map((recipe: any) => {
-      // Convert cover image if it's base64 data
-      const coverImage = recipe.coverImage || 
-        (recipe.images?.[0]?.imageData ? `data:image/jpeg;base64,${recipe.images[0].imageData}` : null);
+      const coverImage =
+        toImageSrc(recipe.coverImage) ??
+        toImageSrc(recipe.images?.[0]?.imageData ?? null);
 
       // Process step images
       const steps = recipe.steps.map((step: any) => {
         const stepImage = recipe.images?.find((img: any) => img.stepId === step.id);
         return {
           ...step,
-          imageUrl: stepImage?.imageData ? `data:image/jpeg;base64,${stepImage.imageData}` : null,
+          imageUrl: toImageSrc(stepImage?.imageData ?? null),
         };
       });
 
       // Process additional images
       const images = recipe.images?.map((img: any) => ({
         ...img,
-        imageUrl: img.imageData ? `data:image/jpeg;base64,${img.imageData}` : img.imageUrl,
+        imageUrl: toImageSrc(img.imageData) ?? img.imageUrl,
       })) || [];
 
       return {
@@ -1093,6 +1121,16 @@ Return ONLY valid JSON, no additional text.`,
   return httpServer;
 }
 
+// Convert a stored image value to a renderable src string.
+// New records: imageData is an https:// R2 URL — returned as-is.
+// Old records: imageData is raw base64 — reconstructed as a data URL for backward compatibility.
+// coverImage on old recipe rows is stored as a full data: URL — also returned as-is.
+function toImageSrc(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  if (stored.startsWith("https://") || stored.startsWith("data:")) return stored;
+  return `data:image/jpeg;base64,${stored}`;
+}
+
 // Helper function to analyze an image
 async function analyzeImage(imageData: string): Promise<{
   description: string;
@@ -1220,7 +1258,7 @@ function generateRecipeHtml(recipe: any): string {
           <div class="step-content">
             <p>${step.instruction}</p>
             ${step.duration ? `<small style="color: #8a7f78;">About ${step.duration} minutes</small>` : ""}
-            ${stepImage ? `<img src="data:image/jpeg;base64,${stepImage.imageData}" alt="${stepImage.stageDescription || ''}" class="step-image">` : ""}
+            ${stepImage ? `<img src="${toImageSrc(stepImage.imageData) || ''}" alt="${stepImage.stageDescription || ''}" class="step-image">` : ""}
           </div>
         </div>
       `;

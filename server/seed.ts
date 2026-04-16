@@ -1,13 +1,21 @@
 import { storage } from "./storage";
-import { db } from "./db";
-import { recipes } from "@shared/schema";
+import { authStorage } from "./replit_integrations/auth";
 
-const SEED_USER_ID = "seed-demo-user";
+const SEED_REPLIT_ID = "seed-demo-user";
 
 export async function seedDatabase() {
   try {
-    // Check if we already have seed data
-    const existingRecipes = await storage.getRecipesByUser(SEED_USER_ID);
+    // Upsert the demo user — replitId is the stable lookup key, id is an auto-generated UUID
+    const demoUser = await authStorage.upsertUser({
+      replitId: SEED_REPLIT_ID,
+      email: "demo@bakedwithrowan.local",
+      firstName: "Demo",
+      lastName: "Chef",
+      profileImageUrl: null,
+    });
+
+    // Check if seed recipes already exist for this user
+    const existingRecipes = await storage.getRecipesByUser(demoUser.id);
     if (existingRecipes.length > 0) {
       console.log("Seed data already exists, skipping...");
       return;
@@ -15,9 +23,11 @@ export async function seedDatabase() {
 
     console.log("Seeding database with sample recipes...");
 
+    const userId = demoUser.id;
+
     // Recipe 1: Classic Chocolate Chip Cookies
     const cookies = await storage.createRecipe({
-      userId: SEED_USER_ID,
+      userId,
       title: "Classic Chocolate Chip Cookies",
       description: "Soft, chewy cookies with melty chocolate chips - a timeless family favorite that brings back childhood memories.",
       servings: 24,
@@ -51,7 +61,7 @@ export async function seedDatabase() {
 
     // Recipe 2: Creamy Garlic Pasta
     const pasta = await storage.createRecipe({
-      userId: SEED_USER_ID,
+      userId,
       title: "Creamy Garlic Parmesan Pasta",
       description: "A quick and indulgent weeknight dinner with a velvety garlic cream sauce that comes together in under 30 minutes.",
       servings: 4,
@@ -82,7 +92,7 @@ export async function seedDatabase() {
 
     // Recipe 3: Honey Garlic Salmon
     const salmon = await storage.createRecipe({
-      userId: SEED_USER_ID,
+      userId,
       title: "Honey Garlic Glazed Salmon",
       description: "Perfectly pan-seared salmon with a sweet and savory glaze that caramelizes beautifully. Restaurant-quality dinner in 20 minutes.",
       servings: 4,
@@ -113,9 +123,9 @@ export async function seedDatabase() {
       { recipeId: salmon.id, stepNumber: 7, instruction: "Transfer to plates, spoon remaining sauce from pan over salmon. Garnish with sesame seeds and green onions.", duration: 1, imageUrl: null, imageDescription: null },
     ]);
 
-    // Recipe 4: Fresh Garden Salad
+    // Recipe 4: Mediterranean Garden Salad
     const salad = await storage.createRecipe({
-      userId: SEED_USER_ID,
+      userId,
       title: "Mediterranean Garden Salad",
       description: "A vibrant, colorful salad with crisp vegetables, tangy feta, and a zesty lemon herb dressing. Perfect as a side or light meal.",
       servings: 6,
