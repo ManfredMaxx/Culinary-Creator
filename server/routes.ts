@@ -9,18 +9,17 @@ import { ensureCompatibleFormat, speechToText } from "./replit_integrations/audi
 import { generateRecipeBookHtml as generateBookTemplate } from "./recipe-book-template";
 import { z } from "zod";
 import { transcriptionResponseSchema } from "@shared/schema";
+import { getAuth } from "@clerk/express";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Helper to get internal user ID from Replit Auth sub claim
-// The sub claim is stored in replitId, the internal UUID is in id
+// Helper to get internal user ID from Clerk userId
 async function getUserId(req: Request): Promise<string | null> {
-  const replitId = req.user ? (req.user as any).claims?.sub : null;
-  if (!replitId) return null;
-  const user = await authStorage.getUser(replitId);
+  const { userId: clerkUserId } = getAuth(req);
+  if (!clerkUserId) return null;
+  const user = await authStorage.getUser(clerkUserId);
   return user?.id ?? null;
 }
 

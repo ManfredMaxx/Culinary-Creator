@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 
 // Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// No longer written to (Clerk uses JWTs, not server-side sessions), but kept to avoid schema drift.
 export const sessions = pgTable(
   "sessions",
   {
@@ -18,7 +18,7 @@ export const colorThemes = ["michelin-star", "forest-bistro", "vaporwave", "high
 export type ColorTheme = typeof colorThemes[number];
 
 // User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// replitId column stores Clerk userId strings.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   replitId: varchar("replit_id").unique(),

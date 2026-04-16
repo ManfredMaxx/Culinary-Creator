@@ -3,8 +3,7 @@ import { db } from "../../db";
 import { eq } from "drizzle-orm";
 
 // Interface for auth storage operations
-// (IMPORTANT) These user operations are mandatory for Replit Auth.
-// Note: All methods use replitId (the external auth provider's sub claim) for lookups.
+// Note: All methods use replitId (the Clerk userId string) for lookups.
 // The internal id (UUID) is auto-generated and used for foreign key references.
 export interface IAuthStorage {
   getUser(replitId: string): Promise<User | undefined>;
@@ -15,7 +14,7 @@ export interface IAuthStorage {
 }
 
 class AuthStorage implements IAuthStorage {
-  // Get user by replitId (external auth identifier)
+  // Get user by replitId (Clerk userId)
   async getUser(replitId: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.replitId, replitId));
     return user;
@@ -28,7 +27,7 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // Upsert by replitId - if user exists, update; otherwise create with new UUID id
+    // Upsert by replitId (Clerk userId) — if user exists, update; otherwise create with new UUID id
     const [user] = await db
       .insert(users)
       .values(userData)

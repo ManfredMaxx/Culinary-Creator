@@ -1,3 +1,4 @@
+import { SignInButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,9 +15,9 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button asChild data-testid="link-login">
-              <a href="/api/login">Enter</a>
-            </Button>
+            <SignInButton mode="modal">
+              <Button data-testid="link-login">Enter</Button>
+            </SignInButton>
           </div>
         </div>
       </header>
@@ -51,12 +52,12 @@ export default function Landing() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Button size="lg" className="min-w-48 text-base" asChild data-testid="button-hero-cta">
-                <a href="/api/login">
+              <SignInButton mode="modal">
+                <Button size="lg" className="min-w-48 text-base" data-testid="button-hero-cta">
                   <Sparkles className="w-5 h-5 mr-2" />
                   Enter the Kitchen
-                </a>
-              </Button>
+                </Button>
+              </SignInButton>
               <Button size="lg" variant="outline" className="min-w-48 text-base backdrop-blur-sm" asChild>
                 <a href="#features">
                   Discover More
@@ -171,12 +172,12 @@ export default function Landing() {
               finds its permanent home.
             </p>
             
-            <Button size="lg" className="min-w-56 text-base" asChild data-testid="button-footer-cta">
-              <a href="/api/login">
+            <SignInButton mode="modal">
+              <Button size="lg" className="min-w-56 text-base" data-testid="button-footer-cta">
                 <ChefHat className="w-5 h-5 mr-2" />
                 Step Inside
-              </a>
-            </Button>
+              </Button>
+            </SignInButton>
             
             <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
               <div className="text-center">
